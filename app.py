@@ -14,6 +14,6 @@ else:
 # La parte que se va creando sola vive en zona.py; nucleo.py es fijo y Gemini nunca lo ve ni lo cambia
 nucleo.cargar_secretos()
 nucleo.pedir_nombre()
-nucleo.mostrar_conectados()
 nucleo.mostrar_zona()
 nucleo.seccion_evolucion()
+nucleo.mostrar_conectados()
