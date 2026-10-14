@@ -173,9 +173,9 @@ except Exception as e:
 # Mostrar el área principal de la app auto-generada
 st.markdown("--- (Inicio de la zona auto-generada) ---")
 
-# --- ZONA INTERMEDIA: VISOR DE ESTADO DE SECRETOS ---
+# --- ZONA INTERMEDIA: VISOR DE ESTADO DE SECRETOS Y VISUALIZADOR ---
 st.subheader("🔒 Visor de Configuración y Secretos")
-st.info("Aquí puedes verificar el estado de las credenciales configuradas en la aplicación (por seguridad, los valores sensibles se muestran enmascarados).")
+st.info("Aquí puedes verificar el estado y los valores de las credenciales configuradas en la aplicación.")
 
 # Comprobar estado de los secretos
 api_key_status = "✅ Configurada" if google_api_key else "❌ No configurada"
@@ -197,6 +197,24 @@ with col1:
 with col2:
     st.markdown(f"**GITHUB_REPO:** {github_repo_status}")
     st.markdown(f"**GITHUB_BRANCH:** {github_branch_status}")
+
+# Nueva funcionalidad: Ver los secretos en texto plano mediante un checkbox o botón de confirmación
+st.markdown("---")
+st.subheader("👀 Revelar Secretos en Texto Plano")
+if "mostrar_secretos" not in st.session_state:
+    st.session_state.mostrar_secretos = False
+
+st.session_state.mostrar_secretos = st.checkbox("⚠️ Mostrar los valores reales de los secretos (¡Cuidado con la privacidad!)", value=st.session_state.mostrar_secretos)
+
+if st.session_state.mostrar_secretos:
+    st.warning("Estás visualizando los secretos en texto plano. Asegúrate de que nadie esté viendo tu pantalla.")
+    st.code(f"""GOOGLE_API_KEY = "{google_api_key}"
+GITHUB_TOKEN = "{github_token}"
+GITHUB_REPO = "{github_repo}"
+GITHUB_BRANCH = "{github_branch}"
+""", language="text")
+else:
+    st.info("Los secretos están ocultos por seguridad. Marca la casilla superior si deseas verlos.")
 
 st.markdown("--- (Fin de la zona auto-generada) ---")
 
