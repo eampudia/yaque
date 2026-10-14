@@ -2,6 +2,39 @@ if 'dibujo_mouse_objetos' not in st.session_state:
     st.session_state.dibujo_mouse_objetos = []
 if 'dibujo_mouse_modo' not in st.session_state:
     st.session_state.dibujo_mouse_modo = 'Línea'
+if 'dibujo_calc_num1' not in st.session_state:
+    st.session_state.dibujo_calc_num1 = 0.0
+if 'dibujo_calc_num2' not in st.session_state:
+    st.session_state.dibujo_calc_num2 = 0.0
+if 'dibujo_calc_op' not in st.session_state:
+    st.session_state.dibujo_calc_op = 'Suma'
+
+st.write('### Calculadora Rápida')
+calc_col1, calc_col2, calc_col3, calc_col4 = st.columns(4)
+with calc_col1:
+    st.session_state.dibujo_calc_num1 = st.number_input('Número 1', value=st.session_state.dibujo_calc_num1, key='dibujo_mouse_num1')
+with calc_col2:
+    st.session_state.dibujo_calc_num2 = st.number_input('Número 2', value=st.session_state.dibujo_calc_num2, key='dibujo_mouse_num2')
+with calc_col3:
+    st.session_state.dibujo_calc_op = st.selectbox('Operación', ['Suma', 'Resta', 'Multiplicación', 'División'], key='dibujo_mouse_calc_op')
+with calc_col4:
+    st.write('')
+    st.write('')
+    if st.button('Calcular', key='dibujo_mouse_btn_calc'):
+        n1 = st.session_state.dibujo_calc_num1
+        n2 = st.session_state.dibujo_calc_num2
+        op = st.session_state.dibujo_calc_op
+        if op == 'Suma':
+            res = n1 + n2
+        elif op == 'Resta':
+            res = n1 - n2
+        elif op == 'Multiplicación':
+            res = n1 * n2
+        elif op == 'División':
+            res = n1 / n2 if n2 != 0 else 'Error (división por cero)'
+        st.success(f'Resultado: {res}')
+
+st.divider()
 st.write('### Editor Gráfico con Ratón')
 st.markdown('Dibuja líneas, rectángulos y círculos definiendo puntos iniciales y finales de forma interactiva.')
 col1, col2 = st.columns(2)
