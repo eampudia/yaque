@@ -172,8 +172,50 @@ except Exception as e:
 
 # Mostrar el área principal de la app auto-generada
 st.markdown("--- (Inicio de la zona auto-generada) ---")
-# Aquí puedes poner la lógica interactiva o componentes que la app se vaya creando a sí misma.
 st.info("Esta es la versión inicial de YAQUE. ¡Pídeme añadirle cualquier funcionalidad usando el campo de abajo!")
+
+# Funcionalidad añadida: Consultar cuántas ramas hay en el repositorio de GitHub
+st.subheader("🌿 Explorador de Ramas del Repositorio")
+if st.button("Consultar cuántas ramas tengo"):
+    if not (github_token and github_repo):
+        st.error("No se pueden consultar las ramas porque la aplicación no está conectada a GitHub (faltan GITHUB_TOKEN o GITHUB_REPO).")
+    else:
+        with st.spinner("Consultando ramas en GitHub..."):
+            try:
+                configurar_git()
+                # Hacer fetch de todas las ramas remotas para asegurarnos de tener la lista actualizada
+                git("fetch", "--all")
+                # Listar ramas remotas
+                resultado_remotas = git("ls-remote", "--heads", url_repo())
+                
+                # Procesar las líneas para contar y mostrar las ramas
+                lineas = resultado_remotas.strip().splitlines()
+                ramas = []
+                for linea in lineas:
+                    partes = linea.split()
+                    if len(partes) >= 2:
+                        ref = partes[1]
+                        # Extraer el nombre de la rama limpiando 'refs/heads/'
+                        nombre_rama = ref.replace("refs/heads/", "")
+                        ramas.append(nombre_rama)
+                
+                st.success(f"¡Se han encontrado **{len(ramas)}** ramas en total en el repositorio!")
+                
+                # Mostrar la lista en un desplegable o expander
+                with st.expander("Ver lista de ramas"):
+                    for r in sorted(ramas):
+                        if r == github_branch:
+                            st.markdown(f"- 📌 **{r}** *(rama actual)*")
+                        elif r == RAMA_ORIGINAL:
+                            st.markdown(f"- 🛡️ **{r}** *(rama base original)*")
+                        elif r.startswith("bitacora/"):
+                            st.markdown(f"- 📚 `{r}` *(bitácora)*")
+                        else:
+                            st.markdown(f"- 🌿 `{r}`")
+                            
+            except Exception as e:
+                st.error(f"Ocurrió un error al consultar las ramas: {e}")
+
 st.markdown("--- (Fin de la zona auto-generada) ---")
 
 # Frases para entretener mientras Gemini piensa
