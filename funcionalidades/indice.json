@@ -2,5 +2,9 @@
   {
     "id": "dibujo_mouse",
     "titulo": "🖱️ Dibujo con Ratón"
+  },
+  {
+    "id": "cronometro_creativo",
+    "titulo": "⏱️ Cronómetro y Pomodoro"
   }
 ]
