@@ -14,7 +14,9 @@ import shutil
 import subprocess
 import sys
 import threading
+import time
 import unicodedata
+import uuid
 from datetime import datetime
 
 import streamlit as st
@@ -100,7 +102,7 @@ METODOS_TO_PERMITIDOS = {
 # Textos que no pueden aparecer en zona.py (rutas y nombres de cosas sensibles)
 TEXTOS_PROHIBIDOS = (
     "/proc", "/etc/", "/mount", "/home", "~/", "environ", "secrets", ".streamlit", ".git",
-    "nucleo", "app.py", "zona.py", "api_key", "token", "password",
+    "nucleo", "app.py", "zona.py", "api_key", "token", "password", "yaque_",
 )
 
 # Funciones de Python disponibles al ejecutar zona.py
@@ -542,6 +544,124 @@ FRASES_MIENTRAS_PIENSA = [
 ]
 
 
+# ---------------------------------------------------------------------------
+# Sesiones y turno (compartidos entre todas las personas conectadas)
+# ---------------------------------------------------------------------------
+
+# Una sesión caduca tras este tiempo sin interactuar con la app
+TIEMPO_CADUCIDAD_SESION = 5 * 60
+# Si una evolución lleva más que esto con el turno (algo se ha colgado), otro puede quitárselo
+TIEMPO_MAXIMO_TURNO = 10 * 60
+
+
+@st.cache_resource
+def _compartido():
+    """Datos en memoria del servidor que ven todas las sesiones a la vez."""
+    return {"candado": threading.Lock(), "sesiones": {}, "turno": None}
+
+
+def mi_sesion():
+    return st.session_state.setdefault("yaque_sesion", uuid.uuid4().hex)
+
+
+def limpiar_estado():
+    """Borra el estado de la sesión salvo el de YAQUE (nombre, sesión, avisos)."""
+    for clave in list(st.session_state.keys()):
+        if not str(clave).startswith("yaque_"):
+            del st.session_state[clave]
+
+
+def sesiones_activas():
+    """Sesiones que han hecho algo en los últimos TIEMPO_CADUCIDAD_SESION segundos."""
+    compartido = _compartido()
+    ahora = time.time()
+    with compartido["candado"]:
+        sesiones = compartido["sesiones"]
+        for sesion in [s for s, datos in sesiones.items() if ahora - datos["ultima"] > TIEMPO_CADUCIDAD_SESION]:
+            del sesiones[sesion]
+        return {sesion: dict(datos) for sesion, datos in sesiones.items()}
+
+
+def registrar_actividad(nombre):
+    compartido = _compartido()
+    ahora = time.time()
+    with compartido["candado"]:
+        datos = compartido["sesiones"].setdefault(mi_sesion(), {"inicio": ahora})
+        datos.update(nombre=nombre, ultima=ahora)
+
+
+def limpiar_nombre_persona(texto):
+    """Letras, números, espacios, puntos, guiones y apóstrofos; como mucho 30 caracteres."""
+    texto = re.sub(r"[^\w\s.'-]|_", "", texto or "")
+    return re.sub(r"\s+", " ", texto).strip()[:30]
+
+
+def pedir_nombre():
+    """Pide el nombre al empezar (o cuando la sesión ha caducado) y anota la actividad."""
+    if mi_sesion() not in sesiones_activas():
+        st.session_state.pop("yaque_usuario", None)
+
+    nombre = st.session_state.get("yaque_usuario")
+    if not nombre:
+        with st.form("yaque_formulario_nombre"):
+            st.write("### 👋 ¡Hola! ¿Cómo te llamas?")
+            escrito = st.text_input("Tu nombre", max_chars=30)
+            if st.form_submit_button("Entrar"):
+                nombre = limpiar_nombre_persona(escrito)
+                if nombre:
+                    st.session_state["yaque_usuario"] = nombre
+                    registrar_actividad(nombre)
+                    st.rerun()
+                st.warning("Escribe tu nombre para entrar.")
+        st.stop()
+
+    registrar_actividad(nombre)
+
+
+def hace(segundos):
+    minutos = int(segundos // 60)
+    return "ahora mismo" if minutos == 0 else f"hace {minutos} min"
+
+
+def mostrar_conectados():
+    sesiones = sesiones_activas()
+    yo = mi_sesion()
+    ahora = time.time()
+    total = len(sesiones)
+    with st.expander(f"👥 {total} {'persona conectada' if total == 1 else 'personas conectadas'}"):
+        filas = [
+            {
+                "Nombre": datos["nombre"] + (" (tú)" if sesion == yo else ""),
+                "Conectado": hace(ahora - datos["inicio"]),
+                "Última actividad": hace(ahora - datos["ultima"]),
+            }
+            for sesion, datos in sorted(sesiones.items(), key=lambda item: item[1]["inicio"])
+        ]
+        st.dataframe(filas, hide_index=True)
+        st.caption("Una sesión caduca tras 5 minutos sin actividad.")
+
+
+def tomar_turno():
+    """Solo una evolución o reset a la vez. Devuelve None si coge el turno, o el nombre de quien lo tiene."""
+    compartido = _compartido()
+    ahora = time.time()
+    with compartido["candado"]:
+        turno = compartido["turno"]
+        if turno and turno["sesion"] != mi_sesion() and ahora - turno["desde"] < TIEMPO_MAXIMO_TURNO:
+            return turno["nombre"]
+        compartido["turno"] = {"sesion": mi_sesion(), "nombre": st.session_state.get("yaque_usuario", "Alguien"),
+                               "desde": ahora}
+        return None
+
+
+def soltar_turno():
+    compartido = _compartido()
+    with compartido["candado"]:
+        turno = compartido["turno"]
+        if turno and turno["sesion"] == mi_sesion():
+            compartido["turno"] = None
+
+
 def avisar_tras_recargar(tipo, texto):
     """Guarda un mensaje para mostrarlo después de recargar la app."""
     st.session_state.setdefault("yaque_avisos", []).append((tipo, texto))
@@ -592,9 +712,13 @@ def con_frases(estado, frases, funcion, *args):
 
     hilo = threading.Thread(target=ejecutar)
     hilo.start()
-    while hilo.is_alive():
-        estado.update(label=next(frases))
-        hilo.join(timeout=2)
+    try:
+        while hilo.is_alive():
+            estado.update(label=next(frases))
+            hilo.join(timeout=2)
+    finally:
+        # Si la ejecución se interrumpe (recarga, pestaña cerrada), no soltar el turno con el hilo aún trabajando
+        hilo.join()
     if "error" in resultado:
         raise resultado["error"]
     return resultado.get("valor")
@@ -640,7 +764,7 @@ def hacer_reset():
 
             con_frases(estado, frases, volver_a_original)
 
-            st.session_state.clear()
+            limpiar_estado()
             estado.update(label="¡Listo!", state="complete")
             avisar_tras_recargar("success", "YAQUE ha vuelto a su versión original.")
             return True
@@ -719,7 +843,7 @@ def evolucionar(requerimiento):
                     f.write(nombre + "\n")
 
             # Empezar con un estado limpio: el de la versión anterior puede no encajar con el código nuevo
-            st.session_state.clear()
+            limpiar_estado()
 
             # Sincronizar automáticamente con GitHub si están las credenciales
             if github_token and github_repo and github_branch != RAMA_ORIGINAL:
@@ -762,14 +886,27 @@ def seccion_evolucion():
 
     texto = requerimiento.strip()
     if normalizar(texto).rstrip(".!") == COMANDO_RESET:
-        if hacer_reset():
-            st.rerun()
+        accion = hacer_reset
     elif not texto:
         st.warning("Por favor, escribe un requerimiento para modificar la app.")
+        return
     elif len(texto) > MAX_LONGITUD_PETICION or peticion_sospechosa(texto):
         st.error("Esa petición no está permitida: menciona secretos, código, usuarios, archivos del servidor "
                  "u otros temas protegidos.")
+        return
     else:
-        if evolucionar(texto):
-            # Recargar la app para que se vea ya la nueva versión de zona.py
-            st.rerun()
+        def accion():
+            return evolucionar(texto)
+
+    # Turno único: si otra persona está evolucionando la app, esperar a que termine
+    ocupado_por = tomar_turno()
+    if ocupado_por:
+        st.info(f"Ahora mismo {ocupado_por} está transformando YAQUE. Espera un momento y vuelve a intentarlo.")
+        return
+    try:
+        terminado = accion()
+    finally:
+        soltar_turno()
+    if terminado:
+        # Recargar la app para que se vea ya la nueva versión
+        st.rerun()
