@@ -11,9 +11,9 @@ else:
     st.title(f'🤖 {nombre}')
     st.caption('Una app auto-evolutiva de YAQUE (¿Y ahora qué?)')
 
-# La parte que se va creando sola vive en zona.py; nucleo.py es fijo y Gemini nunca lo ve ni lo cambia
+# Lo que se va creando solo vive en funcionalidades/ (una pestaña cada una); nucleo.py es fijo y Gemini nunca lo ve ni lo cambia
 nucleo.cargar_secretos()
 nucleo.pedir_nombre()
-nucleo.mostrar_zona()
+nucleo.mostrar_funcionalidades()
 nucleo.seccion_evolucion()
 nucleo.mostrar_conectados()
