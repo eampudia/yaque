@@ -8,31 +8,43 @@ if 'dibujo_calc_num2' not in st.session_state:
     st.session_state.dibujo_calc_num2 = 0.0
 if 'dibujo_calc_op' not in st.session_state:
     st.session_state.dibujo_calc_op = 'Suma'
+if 'dibujo_calc_resultado' not in st.session_state:
+    st.session_state.dibujo_calc_resultado = ''
 
-st.write('### Calculadora Rápida')
-calc_col1, calc_col2, calc_col3, calc_col4 = st.columns(4)
-with calc_col1:
-    st.session_state.dibujo_calc_num1 = st.number_input('Número 1', value=st.session_state.dibujo_calc_num1, key='dibujo_mouse_num1')
-with calc_col2:
-    st.session_state.dibujo_calc_num2 = st.number_input('Número 2', value=st.session_state.dibujo_calc_num2, key='dibujo_mouse_num2')
-with calc_col3:
-    st.session_state.dibujo_calc_op = st.selectbox('Operación', ['Suma', 'Resta', 'Multiplicación', 'División'], key='dibujo_mouse_calc_op')
-with calc_col4:
-    st.write('')
-    st.write('')
-    if st.button('Calcular', key='dibujo_mouse_btn_calc'):
-        n1 = st.session_state.dibujo_calc_num1
-        n2 = st.session_state.dibujo_calc_num2
-        op = st.session_state.dibujo_calc_op
-        if op == 'Suma':
-            res = n1 + n2
-        elif op == 'Resta':
-            res = n1 - n2
-        elif op == 'Multiplicación':
-            res = n1 * n2
-        elif op == 'División':
-            res = n1 / n2 if n2 != 0 else 'Error (división por cero)'
-        st.success(f'Resultado: {res}')
+st.markdown('### 🧮 Calculadora Compacta')
+
+with st.container():
+    st.markdown('<style>div[data-testid="stHorizontalBlock"] > div {{padding: 0px 2px;}}</style>', unsafe_allow_html=True)
+    calc_c1, calc_c2, calc_c3, calc_c4, calc_c5 = st.columns([2, 2, 2, 2, 2])
+    with calc_c1:
+        st.session_state.dibujo_calc_num1 = st.number_input('N1', value=st.session_state.dibujo_calc_num1, key='dibujo_mouse_num1', label_visibility='collapsed')
+    with calc_c2:
+        st.session_state.dibujo_calc_op = st.selectbox('Op', ['Suma', 'Resta', 'Multiplicación', 'División'], key='dibujo_mouse_calc_op', label_visibility='collapsed')
+    with calc_c3:
+        st.session_state.dibujo_calc_num2 = st.number_input('N2', value=st.session_state.dibujo_calc_num2, key='dibujo_mouse_num2', label_visibility='collapsed')
+    with calc_c4:
+        if st.button('=', key='dibujo_mouse_btn_calc', use_container_width=True):
+            n1 = st.session_state.dibujo_calc_num1
+            n2 = st.session_state.dibujo_calc_num2
+            op = st.session_state.dibujo_calc_op
+            if op == 'Suma':
+                res = n1 + n2
+            elif op == 'Resta':
+                res = n1 - n2
+            elif op == 'Multiplicación':
+                res = n1 * n2
+            elif op == 'División':
+                res = n1 / n2 if n2 != 0 else 'Error'
+            st.session_state.dibujo_calc_resultado = str(res)
+    with calc_c5:
+        if st.button('C', key='dibujo_mouse_btn_clear_calc', use_container_width=True):
+            st.session_state.dibujo_calc_num1 = 0.0
+            st.session_state.dibujo_calc_num2 = 0.0
+            st.session_state.dibujo_calc_resultado = ''
+            st.rerun()
+
+    if st.session_state.dibujo_calc_resultado:
+        st.info(f'Resultado: {st.session_state.dibujo_calc_resultado}')
 
 st.divider()
 st.write('### Editor Gráfico con Ratón')
