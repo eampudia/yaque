@@ -2,7 +2,7 @@ import random
 from PIL import Image, ImageDraw, ImageOps, ImageEnhance, ImageFilter
 import io
 
-# Inicializar estado de sesión para el Akinator, Editor y la Calculadora
+# Inicializar estado de sesión para el Akinator, Editor, la Calculadora y la nueva característica (Generador de Memes / Plantillas)
 if "akinator_iniciado" not in st.session_state:
     st.session_state.akinator_iniciado = False
 if "personaje_actual" not in st.session_state:
@@ -27,6 +27,16 @@ if "calc_val_ant" not in st.session_state:
     st.session_state.calc_val_ant = 0.0
 if "calc_nuevo" not in st.session_state:
     st.session_state.calc_nuevo = True
+
+# Estado para el Generador de Memes
+if "meme_texto_superior" not in st.session_state:
+    st.session_state.meme_texto_superior = "CUANDO PROGRAMAS EN PYTHON"
+if "meme_texto_inferior" not in st.session_state:
+    st.session_state.meme_texto_inferior = "Y TODO FUNCIONA A LA PRIMERA"
+if "meme_tamano_fuente" not in st.session_state:
+    st.session_state.meme_tamano_fuente = 36
+if "meme_color_texto" not in st.session_state:
+    st.session_state.meme_color_texto = "Blanco"
 
 # Definición extendida y rica de personajes para un Akinator de alta calidad
 PERSONAJES = [
@@ -226,8 +236,13 @@ def generar_imagen_personaje(personaje):
     buffer.seek(0)
     return buffer
 
-# Pestañas principales para separar el Akinator, el Editor de Fotos y la nueva Calculadora
-pestana = st.tabs(["✨ Akinator Mágico", "🎨 Editor de Fotos Pro", "🧮 Calculadora Estilo Windows"])
+# Pestañas principales incluyendo la nueva característica (Generador de Memes)
+pestana = st.tabs([
+    "✨ Akinator Mágico", 
+    "🎨 Editor de Fotos Pro", 
+    "🧮 Calculadora Estilo Windows",
+    "🃏 Creador de Memes Express"
+])
 
 with pestana[0]:
     st.markdown("<h2 style='text-align: center; color: #4A90E2;'>✨ El Gran Akinator Mágico ✨</h2>", unsafe_allow_html=True)
@@ -250,22 +265,21 @@ with pestana[0]:
         st.session_state.adivinado = False
         st.session_state.personaje_actual = None
 
-    if not st.session_state.akinator_iniciado:
+    if not st.session_state.get("akinator_iniciado", False):
         if st.button("🚀 ¡Empezar a Jugar!", use_container_width=True):
             reiniciar_juego()
             st.rerun()
     else:
-        if not st.session_state.juego_terminado:
-            candidatos = st.session_state.candidatos
+        if not st.session_state.get("juego_terminado", False):
+            candidatos = st.session_state.get("candidatos", list(PERSONAJES))
+            preguntas_hechas = st.session_state.get("preguntas_hechas", 0)
             
-            # Si queda 1 candidato o ya hicimos suficientes preguntas, adivinar
-            if len(candidatos) <= 1 or st.session_state.preguntas_hechas >= 7:
+            if len(candidatos) <= 1 or preguntas_hechas >= 7:
                 st.session_state.juego_terminado = True
                 st.session_state.adivinado = True
                 st.session_state.personaje_actual = candidatos[0] if candidatos else random.choice(PERSONAJES)
                 st.rerun()
             
-            # Algoritmo inteligente: buscar el atributo que mejor divida a los candidatos restantes (entropía cercana a 50/50)
             atributos_disponibles = ["magia", "genero", "humano", "villano", "real", "animacion"]
             mejor_atributo = None
             min_diferencia = float('inf')
@@ -290,15 +304,15 @@ with pestana[0]:
                 "animacion": "🎨 ¿Tu personaje pertenece a una obra de animación, dibujo animado o anime?"
             }
             
-            st.subheader(f"Pregunta #{st.session_state.preguntas_hechas + 1}")
+            st.subheader(f"Pregunta #{preguntas_hechas + 1}")
             st.write(preguntas_map.get(mejor_atributo, "¿Tu personaje cumple con esta característica?"))
             
             col1, col2, col3 = st.columns(3)
             
             def responder(respuesta):
-                st.session_state.preguntas_hechas += 1
+                st.session_state.preguntas_hechas = st.session_state.get("preguntas_hechas", 0) + 1
                 nuevos_candidatos = []
-                for c in st.session_state.candidatos:
+                for c in st.session_state.get("candidatos", list(PERSONAJES)):
                     if mejor_atributo == "genero":
                         val = (c.get(mejor_atributo) == "femenino")
                     else:
@@ -331,7 +345,7 @@ with pestana[0]:
                     responder("No estoy seguro")
                     
         else:
-            personaje = st.session_state.personaje_actual
+            personaje = st.session_state.get("personaje_actual", PERSONAJES[0])
             st.balloons()
             st.success("🎉 ¡Akinator ha deducido el resultado!")
             
@@ -343,7 +357,7 @@ with pestana[0]:
             with col_txt:
                 st.markdown(f"### ¡Tu personaje es **{personaje['nombre']}**! {personaje['icono']}")
                 st.write(f"Franquicia / Origen: **{personaje.get('franquicia', 'Desconocido')}**")
-                st.write(f"Preguntas realizadas: **{st.session_state.preguntas_hechas}**")
+                st.write(f"Preguntas realizadas: **{st.session_state.get('preguntas_hechas', 0)}**")
                 st.markdown("¿He acertado tu personaje?")
                 
                 col_res1, col_res2 = st.columns(2)
@@ -457,16 +471,16 @@ with pestana[2]:
         )
 
         def agregar_digito(digito):
-            disp = st.session_state.calc_display
-            if st.session_state.calc_nuevo or disp == "0":
+            disp = st.session_state.get("calc_display", "0")
+            if st.session_state.get("calc_nuevo", True) or disp == "0":
                 st.session_state.calc_display = digito
                 st.session_state.calc_nuevo = False
             else:
                 st.session_state.calc_display = disp + digito
 
         def agregar_punto():
-            disp = st.session_state.calc_display
-            if st.session_state.calc_nuevo:
+            disp = st.session_state.get("calc_display", "0")
+            if st.session_state.get("calc_nuevo", True):
                 st.session_state.calc_display = "0."
                 st.session_state.calc_nuevo = False
             elif "." not in disp:
@@ -480,7 +494,7 @@ with pestana[2]:
 
         def establecer_operacion(op):
             try:
-                st.session_state.calc_val_ant = float(st.session_state.calc_display)
+                st.session_state.calc_val_ant = float(st.session_state.get("calc_display", "0"))
             except ValueError:
                 st.session_state.calc_val_ant = 0.0
             st.session_state.calc_op_pend = op
@@ -488,9 +502,9 @@ with pestana[2]:
 
         def calcular_resultado():
             try:
-                val_actual = float(st.session_state.calc_display)
-                op = st.session_state.calc_op_pend
-                ant = st.session_state.calc_val_ant
+                val_actual = float(st.session_state.get("calc_display", "0"))
+                op = st.session_state.get("calc_op_pend", None)
+                ant = st.session_state.get("calc_val_ant", 0.0)
                 res = val_actual
 
                 if op == "+":
@@ -506,7 +520,7 @@ with pestana[2]:
                         res = ant / val_actual
 
                 if res != "Error":
-                    if res.is_integer():
+                    if isinstance(res, float) and res.is_integer():
                         res = int(res)
                     st.session_state.calc_display = str(res)
                 else:
@@ -540,9 +554,9 @@ with pestana[2]:
         with c2:
             if st.button("±", use_container_width=True):
                 try:
-                    val = float(st.session_state.calc_display)
+                    val = float(st.session_state.get("calc_display", "0"))
                     res = -val
-                    if res.is_integer():
+                    if isinstance(res, float) and res.is_integer():
                         res = int(res)
                     st.session_state.calc_display = str(res)
                 except:
@@ -564,8 +578,8 @@ with pestana[2]:
         with c3:
             if st.button("%", use_container_width=True):
                 try:
-                    val = float(st.session_state.calc_display) / 100.0
-                    if val.is_integer():
+                    val = float(st.session_state.get("calc_display", "0")) / 100.0
+                    if isinstance(val, float) and val.is_integer():
                         val = int(val)
                     st.session_state.calc_display = str(val)
                 except:
@@ -598,9 +612,96 @@ with pestana[2]:
                 establecer_operacion("+")
                 st.rerun()
             if st.button("⌫", use_container_width=True):
-                disp = st.session_state.calc_display
+                disp = st.session_state.get("calc_display", "0")
                 if len(disp) > 1:
                     st.session_state.calc_display = disp[:-1]
                 else:
                     st.session_state.calc_display = "0"
                 st.rerun()
+
+with pestana[3]:
+    st.markdown("<h2 style='text-align: center; color: #FF8C00;'>🃏 Creador de Memes Express 🃏</h2>", unsafe_allow_html=True)
+    st.write("Sube una imagen o usa una plantilla prediseñada para crear tus propios memes al instante.")
+
+    archivo_meme = st.file_uploader("📂 Sube tu imagen para meme (PNG, JPG, JPEG)", type=["png", "jpg", "jpeg"], key="uploader_meme")
+
+    if archivo_meme is not None:
+        img_meme_base = Image.open(archivo_meme).convert("RGB")
+    else:
+        # Crear una imagen por defecto llamativa si no se sube ninguna
+        img_meme_base = Image.new("RGB", (500, 400), color=(50, 50, 70))
+        draw_def = ImageDraw.Draw(img_meme_base)
+        draw_def.rectangle([40, 40, 460, 360], outline=(255, 255, 255), width=3)
+        draw_def.text((120, 180), "¡Sube tu imagen aquí!", fill=(255, 255, 255))
+
+    st.markdown("### ✍️ Textos del Meme")
+    col_t1, col_t2 = st.columns(2)
+    with col_t1:
+        texto_superior = st.text_input("Texto Superior", value=st.session_state.get("meme_texto_superior", "CUANDO PROGRAMAS EN PYTHON"))
+        st.session_state.meme_texto_superior = texto_superior
+    with col_t2:
+        texto_inferior = st.text_input("Texto Inferior", value=st.session_state.get("meme_texto_inferior", "Y TODO FUNCIONA A LA PRIMERA"))
+        st.session_state.meme_texto_inferior = texto_inferior
+
+    col_m1, col_m2 = st.columns(2)
+    with col_m1:
+        tamano_fuente = st.slider("Tamaño de Fuente", 16, 72, st.session_state.get("meme_tamano_fuente", 36))
+        st.session_state.meme_tamano_fuente = tamano_fuente
+    with col_m2:
+        color_texto_opc = st.selectbox("Color del Texto", ["Blanco", "Amarillo", "Verde Neón", "Cian"], index=0)
+        st.session_state.meme_color_texto = color_texto_opc
+
+    color_map = {
+        "Blanco": (255, 255, 255),
+        "Amarillo": (255, 255, 0),
+        "Verde Neón": (0, 255, 128),
+        "Cian": (0, 255, 255)
+    }
+    color_rgb = color_map.get(color_texto_opc, (255, 255, 255))
+
+    # Generar imagen con texto de meme
+    img_meme_final = img_meme_base.copy()
+    draw_meme = ImageDraw.Draw(img_meme_final)
+
+    # Dibujar texto superior centrado
+    if texto_superior:
+        # Usar trazo simulado para contorno negro y texto de color
+        bbox = draw_meme.textbbox((0, 0), texto_superior)
+        w_t = bbox[2] - bbox[0]
+        x_t = (img_meme_final.width - w_t) / 2
+        y_t = 15
+        
+        # Contorno negro para legibilidad
+        for adj_x in [-2, -1, 0, 1, 2]:
+            for adj_y in [-2, -1, 0, 1, 2]:
+                draw_meme.text((x_t + adj_x, y_t + adj_y), texto_superior.upper(), fill=(0, 0, 0))
+        draw_meme.text((x_t, y_t), texto_superior.upper(), fill=color_rgb)
+
+    # Dibujar texto inferior centrado
+    if texto_inferior:
+        bbox_inf = draw_meme.textbbox((0, 0), texto_inferior)
+        w_inf = bbox_inf[2] - bbox_inf[0]
+        h_inf = bbox_inf[3] - bbox_inf[1]
+        x_inf = (img_meme_final.width - w_inf) / 2
+        y_inf = img_meme_final.height - h_inf - 25
+        
+        for adj_x in [-2, -1, 0, 1, 2]:
+            for adj_y in [-2, -1, 0, 1, 2]:
+                draw_meme.text((x_inf + adj_x, y_inf + adj_y), texto_inferior.upper(), fill=(0, 0, 0))
+        draw_meme.text((x_inf, y_inf), texto_inferior.upper(), fill=color_rgb)
+
+    st.markdown("---")
+    st.markdown("#### 🖼️ Vista Previa del Meme")
+    st.image(img_meme_final, use_container_width=True)
+
+    buffer_meme = io.BytesIO()
+    img_meme_final.save(buffer_meme, format="PNG")
+    buffer_meme.seek(0)
+
+    st.download_button(
+        label="💾 Descargar Meme Creado (PNG)",
+        data=buffer_meme,
+        file_name="meme_generado.png",
+        mime="image/png",
+        use_container_width=True
+    )
