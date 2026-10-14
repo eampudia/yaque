@@ -8,6 +8,9 @@ import subprocess
 import threading
 import unicodedata
 from datetime import datetime
+from PIL import Image, ImageEnhance, ImageFilter, ImageOps
+import numpy as np
+import io
 
 # Configuración de la página
 st.set_page_config(page_title='YAQUE - ¿Y ahora qué?', page_icon="🤖", layout="wide")
@@ -174,47 +177,104 @@ except Exception as e:
 st.markdown("--- (Inicio de la zona auto-generada) ---")
 st.info("Esta es la versión inicial de YAQUE. ¡Pídeme añadirle cualquier funcionalidad usando el campo de abajo!")
 
-# Funcionalidad añadida: Consultar cuántas ramas hay en el repositorio de GitHub
-st.subheader("🌿 Explorador de Ramas del Repositorio")
-if st.button("Consultar cuántas ramas tengo"):
-    if not (github_token and github_repo):
-        st.error("No se pueden consultar las ramas porque la aplicación no está conectada a GitHub (faltan GITHUB_TOKEN o GITHUB_REPO).")
-    else:
-        with st.spinner("Consultando ramas en GitHub..."):
-            try:
-                configurar_git()
-                # Hacer fetch de todas las ramas remotas para asegurarnos de tener la lista actualizada
-                git("fetch", "--all")
-                # Listar ramas remotas
-                resultado_remotas = git("ls-remote", "--heads", url_repo())
-                
-                # Procesar las líneas para contar y mostrar las ramas
-                lineas = resultado_remotas.strip().splitlines()
-                ramas = []
-                for linea in lineas:
-                    partes = linea.split()
-                    if len(partes) >= 2:
-                        ref = partes[1]
-                        # Extraer el nombre de la rama limpiando 'refs/heads/'
-                        nombre_rama = ref.replace("refs/heads/", "")
-                        ramas.append(nombre_rama)
-                
-                st.success(f"¡Se han encontrado **{len(ramas)}** ramas en total en el repositorio!")
-                
-                # Mostrar la lista en un desplegable o expander
-                with st.expander("Ver lista de ramas"):
-                    for r in sorted(ramas):
-                        if r == github_branch:
-                            st.markdown(f"- 📌 **{r}** *(rama actual)*")
-                        elif r == RAMA_ORIGINAL:
-                            st.markdown(f"- 🛡️ **{r}** *(rama base original)*")
-                        elif r.startswith("bitacora/"):
-                            st.markdown(f"- 📚 `{r}` *(bitácora)*")
-                        else:
-                            st.markdown(f"- 🌿 `{r}`")
-                            
-            except Exception as e:
-                st.error(f"Ocurrió un error al consultar las ramas: {e}")
+# Funcionalidad añadida: Mini Photoshop / Editor de Fotografía
+st.subheader("🎨 Mini Photoshop - Editor de Fotografía")
+
+# Inicializar estados de sesión para el editor de fotos si no existen
+if "foto_original" not in st.session_state:
+    st.session_state.foto_original = None
+if "foto_actual" not in st.session_state:
+    st.session_state.foto_actual = None
+
+archivo_subido = st.file_uploader("Sube una imagen para editar", type=["jpg", "jpeg", "png"])
+
+if archivo_subido is not None:
+    imagen_cargada = Image.open(archivo_subido)
+    if st.session_state.foto_original != archivo_subido.name:
+        st.session_state.foto_original = archivo_subido.name
+        st.session_state.foto_actual = imagen_cargada.copy()
+
+if st.session_state.foto_actual is not None:
+    # Controles de edición en la barra lateral o en columnas
+    col_controles, col_imagen = st.columns([1, 2], gap="medium")
+
+    with col_controles:
+        st.markdown("### 🎛️ Herramientas")
+        
+        # Rotación y Espejo
+        st.markdown("#### Transformación")
+        if st.button("🔄 Girar 90° Horario"):
+            st.session_state.foto_actual = st.session_state.foto_actual.rotate(-90, expand=True)
+            st.rerun()
+        if st.button("↔️ Voltear Horizontal"):
+            st.session_state.foto_actual = ImageOps.mirror(st.session_state.foto_actual)
+            st.rerun()
+        if st.button("↕️ Voltear Vertical"):
+            st.session_state.foto_actual = ImageOps.flip(st.session_state.foto_actual)
+            st.rerun()
+
+        st.markdown("---")
+        # Ajustes de Color y Luz
+        st.markdown("#### Ajustes")
+        brillo = st.slider("Brillo", 0.0, 2.0, 1.0, 0.1)
+        contraste = st.slider("Contraste", 0.0, 2.0, 1.0, 0.1)
+        saturacion = st.slider("Saturación", 0.0, 2.0, 1.0, 0.1)
+        nitidez = st.slider("Nitidez", 0.0, 2.0, 1.0, 0.1)
+
+        if st.button("Aplicar Ajustes"):
+            img = st.session_state.foto_actual
+            img = ImageEnhance.Brightness(img).enhance(brillo)
+            img = ImageEnhance.Contrast(img).enhance(contraste)
+            img = ImageEnhance.Color(img).enhance(saturacion)
+            img = ImageEnhance.Sharpness(img).enhance(nitidez)
+            st.session_state.foto_actual = img
+            st.success("¡Ajustes aplicados!")
+            st.rerun()
+
+        st.markdown("---")
+        # Filtros Artísticos
+        st.markdown("#### Filtros")
+        if st.button("⚫ Blanco y Negro"):
+            st.session_state.foto_actual = ImageOps.grayscale(st.session_state.foto_actual).convert("RGB")
+            st.rerun()
+        if st.button(" invertido (Negativo)"):
+            if st.session_state.foto_actual.mode == "RGBA":
+                r, g, b, a = st.session_state.foto_actual.split()
+                rgb_invertido = ImageOps.invert(Image.merge("RGB", (r, g, b)))
+                st.session_state.foto_actual = Image.merge("RGBA", (*rgb_invertido.split(), a))
+            else:
+                st.session_state.foto_actual = ImageOps.invert(st.session_state.foto_actual.convert("RGB"))
+            st.rerun()
+        if st.button("🌫️ Desenfoque (Blur)"):
+            st.session_state.foto_actual = st.session_state.foto_actual.filter(ImageFilter.BLUR)
+            st.rerun()
+        if st.button("🔍 Enfocar (Sharpen)"):
+            st.session_state.foto_actual = st.session_state.foto_actual.filter(ImageFilter.SHARPEN)
+            st.rerun()
+        if st.button("🎨 Bordes (Contorno)"):
+            st.session_state.foto_actual = st.session_state.foto_actual.filter(ImageFilter.FIND_EDGES).convert("RGB")
+            st.rerun()
+
+        st.markdown("---")
+        if st.button("🗑️ Reiniciar Imagen Original"):
+            if archivo_subido is not None:
+                st.session_state.foto_actual = Image.open(archivo_subido)
+                st.rerun()
+
+    with col_imagen:
+        st.markdown("### 🖼️ Lienzo de Trabajo")
+        st.image(st.session_state.foto_actual, use_container_width=True)
+
+        # Botón de descarga
+        buffer = io.BytesIO()
+        st.session_state.foto_actual.save(buffer, format="PNG")
+        byte_im = buffer.getvalue()
+        st.download_button(
+            label="💾 Descargar Imagen Editada",
+            data=byte_im,
+            file_name="imagen_editada.png",
+            mime="image/png"
+        )
 
 st.markdown("--- (Fin de la zona auto-generada) ---")
 
