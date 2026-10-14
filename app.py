@@ -7,7 +7,7 @@ import shutil
 import subprocess
 import threading
 import unicodedata
-from datetime import datetime
+from datetime import datetime, date
 
 # Configuración de la página
 st.set_page_config(page_title='YAQUE - ¿Y ahora qué?', page_icon="🤖", layout="wide")
@@ -180,7 +180,12 @@ st.write("Descubre cuál es tu constelación astral y lee tu predicción cósmic
 col1, col2 = st.columns(2)
 with col1:
     nombre_usuario = st.text_input("Introduce tu nombre:", "Viajero Estelar")
-    fecha_nacimiento = st.date_input("Selecciona tu fecha de nacimiento:", datetime(1995, 6, 15))
+    fecha_nacimiento = st.date_input(
+        "Selecciona tu fecha de nacimiento:", 
+        value=datetime(1995, 6, 15), 
+        min_value=date(1900, 1, 1), 
+        max_value=datetime.now().date()
+    )
 
 if st.button("Consultar los Astros"):
     mes = fecha_nacimiento.month
