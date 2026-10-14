@@ -1,6 +1,8 @@
 import streamlit as st
 from google import genai
 import os
+import re
+import shutil
 import subprocess
 
 # Configuración de la página
@@ -70,37 +72,39 @@ if st.button("Evolucionar Aplicación"):
             try:
                 client = genai.Client(api_key=google_api_key)
 
-                    # 1. Descargar todos los modelos disponibles desde la API
-                    modelos_disponibles = []
-                    for m in client.models.list():
-                        if 'gemini' in m.name.lower():
-                            modelos_disponibles.append(m.name)
+                # 1. Descargar todos los modelos disponibles desde la API
+                modelos_disponibles = []
+                for m in client.models.list():
+                    if 'gemini' in m.name.lower():
+                        modelos_disponibles.append(m.name)
 
-                    if not modelos_disponibles:
-                        st.error("No se encontraron modelos de Gemini disponibles en esta cuenta.")
-                        st.stop()
+                if not modelos_disponibles:
+                    st.error("No se encontraron modelos de Gemini disponibles en esta cuenta.")
+                    st.stop()
 
-                    # 2. Filtrar únicamente por la coincidencia estricta de 'flash' y 'lite'
-                    modelos_filtrados = [
-                        m for m in modelos_disponibles 
-                        if 'flash' in m.lower() and 'lite' in m.lower()
-                    ]
+                # 2. Filtrar únicamente por la coincidencia estricta de 'flash' y 'lite'
+                modelos_filtrados = [
+                    m for m in modelos_disponibles
+                    if 'flash' in m.lower() and 'lite' in m.lower()
+                ]
 
-                    if not modelos_filtrados:
-                        st.error("No se encontraron modelos que coincidan con 'flash' y 'lite' en tu cuenta.")
-                        st.stop()
+                if not modelos_filtrados:
+                    st.error("No se encontraron modelos que coincidan con 'flash' y 'lite' en tu cuenta.")
+                    st.stop()
 
-                    # 3. Función dinámica para extraer la versión numérica del string
-                    def extraer_numero_version(nombre):
-                        coincidencias = re.findall(r'\d+\.\d+|\d+', nombre)
-                        if  coincidencias:
-                            return float(coincidencias[0])
-                        return float('inf')
+                # 3. Función dinámica para extraer la versión numérica del string
+                #    (los modelos sin número, p. ej. '-latest', van al principio)
+                def extraer_numero_version(nombre):
+                    coincidencias = re.findall(r'\d+\.\d+|\d+', nombre)
+                    if coincidencias:
+                        return float(coincidencias[0])
+                    return float('-inf')
 
-                    # 4. Ordenar dinámicamente de menor a mayor versión
-                    modelos_ordenados = sorted(modelos_filtrados, key=extraer_numero_version)
+                # 4. Ordenar de menor a mayor versión y quedarnos con la más reciente
+                modelos_ordenados = sorted(modelos_filtrados, key=extraer_numero_version)
+                modelo_elegido = modelos_ordenados[-1]
+                st.caption(f"Usando el modelo: {modelo_elegido}")
 
-                
                 prompt = (
                     f"Eres un programador experto en Python.\n"
                     f"Tu tarea es modificar el código de la aplicación de Python actual para añadir una nueva funcionalidad.\n\n"
@@ -115,19 +119,29 @@ if st.button("Evolucionar Aplicación"):
                 )
                 
                 response = client.models.generate_content(
-                    model='gemini-2.5-flash-lite',
+                    model=modelo_elegido,
                     contents=prompt,
                 )
-                
+
                 nuevo_codigo = response.text.strip()
-                
+
                 # Limpiar posibles bloques markdown accidentales del LLM
                 if nuevo_codigo.startswith("```python"):
                     nuevo_codigo = nuevo_codigo[9:]
                 if nuevo_codigo.endswith("```"):
                     nuevo_codigo = nuevo_codigo[:-3]
                 nuevo_codigo = nuevo_codigo.strip()
-                
+
+                # Validar que el código generado es Python válido antes de sobrescribir nada
+                try:
+                    compile(nuevo_codigo, "app.py", "exec")
+                except SyntaxError as syntax_error:
+                    st.error(f"El código generado no es válido, no se ha modificado app.py: {syntax_error}")
+                    st.stop()
+
+                # Guardar una copia de seguridad de la versión anterior
+                shutil.copyfile("app.py", "app.py.bak")
+
                 # Guardar el nuevo código en app.py
                 with open("app.py", "w", encoding="utf-8") as f:
                     f.write(nuevo_codigo)
@@ -149,10 +163,15 @@ if st.button("Evolucionar Aplicación"):
                         subprocess.run(["git", "commit", "-m", f"YAQUE Auto-update: {requerimiento[:50]}"], check=True)
                         
                         url_con_token = f"https://oauth2:{github_token}@github.com/{github_repo}.git"
-                        subprocess.run(["git", "push", url_con_token, "HEAD:main"], check=True)
+                        subprocess.run(["git", "push", url_con_token, "HEAD:main"], check=True, capture_output=True, text=True)
                         st.success("¡Sincronizado correctamente con tu repositorio de GitHub!")
                     except Exception as git_error:
-                        st.warning(f"El código se actualizó localmente pero falló la subida a GitHub: {git_error}")
+                        # Ocultar el token: el mensaje de error incluye el comando con la URL
+                        detalle = str(git_error)
+                        if isinstance(git_error, subprocess.CalledProcessError) and git_error.stderr:
+                            detalle += f"\n{git_error.stderr}"
+                        detalle = detalle.replace(github_token, "***")
+                        st.warning(f"El código se actualizó localmente pero falló la subida a GitHub: {detalle}")
 
             except Exception as e:
                 st.error(f"Ocurrió un error al procesar la actualización: {e}")
