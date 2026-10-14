@@ -6,14 +6,12 @@ ejecuta con permisos limitados (ejecutar_zona), sin acceso a secretos, archivos 
 """
 import ast
 import builtins
-import hmac
 import os
 import random
 import re
 import shutil
 import subprocess
 import threading
-import time
 import unicodedata
 from datetime import datetime
 
@@ -41,15 +39,13 @@ def leer_secreto(nombre):
     return os.environ.get(nombre, "")
 
 
-google_api_key = clave_acceso = github_token = github_repo = github_branch = ""
+google_api_key = github_token = github_repo = github_branch = ""
 
 
 def cargar_secretos():
     """Se llama en cada ejecución de la app, para ver los secretos cambiados sin reiniciarla."""
-    global google_api_key, clave_acceso, github_token, github_repo, github_branch
+    global google_api_key, github_token, github_repo, github_branch
     google_api_key = leer_secreto("GOOGLE_API_KEY")
-    # Clave que hay que escribir para evolucionar la app o hacer un reset
-    clave_acceso = leer_secreto("YAQUE_PASSWORD")
     # Credenciales de GitHub
     github_token = leer_secreto("GITHUB_TOKEN")
     github_repo = leer_secreto("GITHUB_REPO")  # Formato: usuario/repositorio
@@ -61,9 +57,6 @@ RAMA_ORIGINAL = "ORIGINAL"
 COMANDO_RESET = "haz un reset"
 
 MAX_LONGITUD_PETICION = 1000
-# Intentos de clave fallidos (entre todos los visitantes) antes de bloquear durante VENTANA_BLOQUEO segundos
-MAX_FALLOS_CLAVE = 5
-VENTANA_BLOQUEO = 15 * 60
 
 
 # ---------------------------------------------------------------------------
@@ -182,31 +175,6 @@ def ejecutar_zona(codigo):
     builtins_seguros["__import__"] = importar_seguro
     entorno = {"__builtins__": builtins_seguros, "__name__": "zona", "st": st}
     exec(compile(codigo, "zona.py", "exec"), entorno)
-
-
-@st.cache_resource
-def _registro_fallos():
-    # Compartido entre todas las sesiones: un atacante no puede saltárselo abriendo pestañas nuevas
-    return {"fallos": [], "candado": threading.Lock()}
-
-
-def acceso_bloqueado():
-    registro = _registro_fallos()
-    with registro["candado"]:
-        ahora = time.time()
-        registro["fallos"][:] = [t for t in registro["fallos"] if ahora - t < VENTANA_BLOQUEO]
-        return len(registro["fallos"]) >= MAX_FALLOS_CLAVE
-
-
-def comprobar_clave(clave):
-    if not clave_acceso:
-        return False
-    correcta = hmac.compare_digest(clave.encode(), str(clave_acceso).encode())
-    if not correcta:
-        registro = _registro_fallos()
-        with registro["candado"]:
-            registro["fallos"].append(time.time())
-    return correcta
 
 
 # ---------------------------------------------------------------------------
@@ -534,18 +502,11 @@ def seccion_evolucion():
         max_chars=MAX_LONGITUD_PETICION,
         placeholder="Ej: Añade un gráfico de barras, un convertidor de unidades, o un juego de tres en raya...",
     )
-    clave = st.text_input("Clave de acceso", type="password")
 
     if not st.button("Evolucionar Aplicación"):
         return
-    if not (google_api_key and clave_acceso):
+    if not google_api_key:
         st.error("La aplicación no está configurada para auto-evolucionar.")
-        return
-    if acceso_bloqueado():
-        st.error("Demasiados intentos fallidos. Inténtalo más tarde.")
-        return
-    if not comprobar_clave(clave):
-        st.error("Clave incorrecta.")
         return
 
     texto = requerimiento.strip()
