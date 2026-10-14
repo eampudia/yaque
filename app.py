@@ -172,8 +172,58 @@ except Exception as e:
 
 # Mostrar el área principal de la app auto-generada
 st.markdown("--- (Inicio de la zona auto-generada) ---")
-# Aquí puedes poner la lógica interactiva o componentes que la app se vaya creando a sí misma.
-st.info("Esta es la versión inicial de YAQUE. ¡Pídeme añadirle cualquier funcionalidad usando el campo de abajo!")
+
+# --- NUEVA FUNCIONALIDAD: Calculador de Constelación Astral ---
+st.subheader("✨ Calculador de Constelación Astral")
+st.write("Descubre cuál es tu constelación astral y lee tu predicción cósmica basada en tu fecha de nacimiento.")
+
+col1, col2 = st.columns(2)
+with col1:
+    nombre_usuario = st.text_input("Introduce tu nombre:", "Viajero Estelar")
+    fecha_nacimiento = st.date_input("Selecciona tu fecha de nacimiento:", datetime(1995, 6, 15))
+
+if st.button("Consultar los Astros"):
+    mes = fecha_nacimiento.month
+    dia = fecha_nacimiento.day
+    
+    # Lógica sencilla para determinar constelación/signo astral
+    if (mes == 3 and dia >= 21) or (mes == 4 and dia <= 19):
+        constelacion, elemento = "Aries (El Carnero Estelar)", "Fuego"
+    elif (mes == 4 and dia >= 20) or (mes == 5 and dia <= 20):
+        constelacion, elemento = "Tauro (El Toro Celestial)", "Tierra"
+    elif (mes == 5 and dia >= 21) or (mes == 6 and dia <= 20):
+        constelacion, elemento = "Géminis (Los Gemelos Cósmicos)", "Aire"
+    elif (mes == 6 and dia >= 21) or (mes == 7 and dia <= 22):
+        constelacion, elemento = "Cáncer (El Cangrejo Lunar)", "Agua"
+    elif (mes == 7 and dia >= 23) or (mes == 8 and dia <= 22):
+        constelacion, elemento = "Leo (El León de Nebulosa)", "Fuego"
+    elif (mes == 8 and dia >= 23) or (mes == 9 and dia <= 22):
+        constelacion, elemento = "Virgo (La Doncella de las Estrellas)", "Tierra"
+    elif (mes == 9 and dia >= 23) or (mes == 10 and dia <= 22):
+        constelacion, elemento = "Libra (La Balanza Galáctica)", "Aire"
+    elif (mes == 10 and dia >= 23) or (mes == 11 and dia <= 21):
+        constelacion, elemento = "Escorpio (El Aguijón Cósmico)", "Agua"
+    elif (mes == 11 and dia >= 22) or (mes == 12 and dia <= 21):
+        constelacion, elemento = "Sagitario (El Arquero Astral)", "Fuego"
+    elif (mes == 12 and dia >= 22) or (mes == 1 and dia <= 19):
+        constelacion, elemento = "Capricornio (La Cabra de Cúmulo)", "Tierra"
+    elif (mes == 1 and dia >= 20) or (mes == 2 and dia <= 18):
+        constelacion, elemento = "Acuario (El Portador de Iones)", "Aire"
+    else:
+        constelacion, elemento = "Piscis (Los Peces de la Vía Láctea)", "Agua"
+
+    st.success(f"¡Saludos, **{nombre_usuario}**!")
+    st.markdown(f"🌌 Tu constelación astral es **{constelacion}** bajo el elemento **{elemento}**.")
+    
+    # Generar predicción aleatoria pero temática
+    predicciones = [
+        "Las alineaciones estelares indican que hoy es un día excelente para iniciar nuevos proyectos tecnológicos y evolucionar tu código mental.",
+        "Un cúmulo cercano de energía te otorgará una claridad inusitada para resolver problemas complejos antes de que termine el ciclo lunar.",
+        "La gravedad de tus pensamientos atraerá buenas vibraciones y sincronicidades inesperadas en tu entorno digital y personal.",
+        "Los destellos de una supernova lejana iluminan tu creatividad; aprovecha para diseñar, construir o pedir un cambio radical a YAQUE."
+    ]
+    st.info(f"🔮 **Oráculo Cósmico:** {random.choice(predicciones)}")
+
 st.markdown("--- (Fin de la zona auto-generada) ---")
 
 # Frases para entretener mientras Gemini piensa
