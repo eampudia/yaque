@@ -5,7 +5,7 @@ import subprocess
 
 # Configuración de la página
 st.set_page_config(page_title="YAQUE - ¿Y ahora qué?", page_icon="🤖", layout="wide")
-st.title("🤖 YAQUE ("¿Y ahora qué?") - La App Auto-Evolutiva")
+st.title('🤖 YAQUE ("¿Y ahora qué?') - La App Auto-Evolutiva")
 
 # Intentar obtener la API Key de varias fuentes seguras
 google_api_key = ""
@@ -71,8 +71,8 @@ if st.button("Evolucionar Aplicación"):
                 client = genai.Client(api_key=google_api_key)
                 
                 prompt = (
-                    f"Eres un programador experto en Streamlit.\n"
-                    f"Tu tarea es modificar el código de la aplicación de Streamlit actual para añadir una nueva funcionalidad.\n\n"
+                    f"Eres un programador experto en Python.\n"
+                    f"Tu tarea es modificar el código de la aplicación de Python actual para añadir una nueva funcionalidad.\n\n"
                     f"CÓDIGO ACTUAL DE LA APLICACIÓN:\n"
                     f"```python\n{codigo_actual}\n```\n\n"
                     f"REQUERIMIENTO DEL USUARIO:\n"
