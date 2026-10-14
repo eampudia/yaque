@@ -42,9 +42,11 @@ if st.session_state.dibujo_mouse_objetos:
             datos_grafica.append({'id': idx, 'x': hx1, 'y': hy1, 'figura': f'Rect {idx}'})
         elif t == 'Círculo':
             cx, cy = obj['x1'], obj['y1']
-            radio = max(abs(obj['x2'] - obj['x1']), 0.5)
+            radio = ((obj['x2'] - cx) ** 2 + (obj['y2'] - cy) ** 2) ** 0.5
+            if radio < 0.5:
+                radio = 5.0
             import numpy as np
-            angulos = np.linspace(0, 2 * np.pi, 30)
+            angulos = np.linspace(0, 2 * np.pi, 60)
             for ang in angulos:
                 px = cx + radio * np.cos(ang)
                 py = cy + radio * np.sin(ang)
