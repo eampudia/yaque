@@ -173,9 +173,9 @@ except Exception as e:
 # Mostrar el área principal de la app auto-generada
 st.markdown("--- (Inicio de la zona auto-generada) ---")
 
-# Idea loca: ¡El Oráculo Absurdo y el Simulador de Excusas Universales!
-st.subheader("🔮 El Oráculo Absurdo y Creador de Excusas Cuánticas")
-st.write("¿Necesitas una excusa inquebrantable para no ir a trabajar, o quieres consultar una pregunta existencial a un ente de silicio con sobredosis de café? ¡Estás en el lugar correcto!")
+# Idea loca: ¡El Oráculo Absurdo, el Simulador de Excusas Universales y el Tres en Raya!
+st.subheader("🔮 El Oráculo Absurdo, Creador de Excusas Cuánticas y 3 en Raya")
+st.write("¿Necesitas una excusa inquebrantable, consultar una pregunta existencial o echar una partida de tres en raya contra un contrincante cuántico? ¡Estás en el lugar correcto!")
 
 if "historial_oraculo" not in st.session_state:
     st.session_state.historial_oraculo = []
@@ -222,6 +222,66 @@ if st.session_state.historial_oraculo:
         with st.container(border=True):
             st.markdown(f"**[{item['tipo']}]** _{item['texto']}_")
             st.info(item['respuesta'])
+
+st.markdown("---")
+st.markdown("### ❌⭕ Tres en Raya (Tic-Tac-Toe)")
+
+if "tictactoe_board" not in st.session_state:
+    st.session_state.tictactoe_board = [""] * 9
+if "tictactoe_turn" not in st.session_state:
+    st.session_state.tictactoe_turn = "❌"
+if "tictactoe_winner" not in st.session_state:
+    st.session_state.tictactoe_winner = None
+
+def check_winner(board):
+    winning_combos = [
+        (0, 1, 2), (3, 4, 5), (6, 7, 8), # Filas
+        (0, 3, 6), (1, 4, 7), (2, 5, 8), # Columnas
+        (0, 4, 8), (2, 4, 6)             # Diagonales
+    ]
+    for a, b, c in winning_combos:
+        if board[a] and board[a] == board[b] == board[c]:
+            return board[a]
+    if "" not in board:
+        return "Empate"
+    return None
+
+col_tictactoe_1, col_tictactoe_2 = st.columns([1, 2])
+
+with col_tictactoe_1:
+    st.write(f"Turno actual: **{st.session_state.tictactoe_turn}**")
+    if st.button("Reiniciar Partida"):
+        st.session_state.tictactoe_board = [""] * 9
+        st.session_state.tictactoe_turn = "❌"
+        st.session_state.tictactoe_winner = None
+        st.rerun()
+
+with col_tictactoe_2:
+    board = st.session_state.tictactoe_board
+    winner = st.session_state.tictactoe_winner
+
+    for row in range(3):
+        cols = st.columns(3)
+        for col in range(3):
+            idx = row * 3 + col
+            with cols[col]:
+                label = board[idx] if board[idx] != "" else " "
+                disabled = (winner is not None) or (board[idx] != "")
+                if st.button(label, key=f"cell_{idx}", disabled=disabled, use_container_width=True):
+                    if not board[idx] and not winner:
+                        board[idx] = st.session_state.tictactoe_turn
+                        res = check_winner(board)
+                        if res:
+                            st.session_state.tictactoe_winner = res
+                        else:
+                            st.session_state.tictactoe_turn = "⭕" if st.session_state.tictactoe_turn == "❌" else "❌"
+                        st.rerun()
+
+if st.session_state.tictactoe_winner:
+    if st.session_state.tictactoe_winner == "Empate":
+        st.info("¡La partida ha terminado en Empate! 🤝")
+    else:
+        st.success(f"🎉 ¡El jugador {st.session_state.tictactoe_winner} ha ganado la partida! 🏆")
 
 st.markdown("--- (Fin de la zona auto-generada) ---")
 
