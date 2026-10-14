@@ -4,8 +4,8 @@ import os
 import subprocess
 
 # Configuración de la página
-st.set_page_config(page_title="YAQUE - ¿Y ahora qué?", page_icon="🤖", layout="wide")
-st.title('🤖 YAQUE ("¿Y ahora qué?') - La App Auto-Evolutiva")
+st.set_page_config(page_title='YAQUE - ¿Y ahora qué?', page_icon="🤖", layout="wide")
+st.title('🤖 YAQUE ('¿Y ahora qué?) - La App Auto-Evolutiva')
 
 # Intentar obtener la API Key de varias fuentes seguras
 google_api_key = ""
