@@ -173,8 +173,30 @@ except Exception as e:
 # Mostrar el área principal de la app auto-generada
 st.markdown("--- (Inicio de la zona auto-generada) ---")
 
-# --- ZONA INTERMEDIA VACÍA ---
-st.info("La calculadora de constelación astral ha sido eliminada. Escribe abajo un nuevo requerimiento para que YAQUE evolucione.")
+# --- ZONA INTERMEDIA: VISOR DE ESTADO DE SECRETOS ---
+st.subheader("🔒 Visor de Configuración y Secretos")
+st.info("Aquí puedes verificar el estado de las credenciales configuradas en la aplicación (por seguridad, los valores sensibles se muestran enmascarados).")
+
+# Comprobar estado de los secretos
+api_key_status = "✅ Configurada" if google_api_key else "❌ No configurada"
+github_token_status = "✅ Configurado" if github_token else "❌ No configurado"
+github_repo_status = f"✅ `{github_repo}`" if github_repo else "❌ No configurado"
+github_branch_status = f"✅ `{github_branch}`" if github_branch else "⚠️ Usando valor por defecto (master)"
+
+col1, col2 = st.columns(2)
+
+with col1:
+    st.markdown(f"**GOOGLE_API_KEY:** {api_key_status}")
+    if google_api_key:
+        st.caption(f"Valor enmascarado: `{google_api_key[:4]}...{google_api_key[-4:]}` (Longitud: {len(google_api_key)})")
+    
+    st.markdown(f"**GITHUB_TOKEN:** {github_token_status}")
+    if github_token:
+        st.caption(f"Valor enmascarado: `ghp_...{github_token[-4:]}` (Longitud: {len(github_token)})")
+
+with col2:
+    st.markdown(f"**GITHUB_REPO:** {github_repo_status}")
+    st.markdown(f"**GITHUB_BRANCH:** {github_branch_status}")
 
 st.markdown("--- (Fin de la zona auto-generada) ---")
 
