@@ -1,0 +1,3 @@
+__pycache__/
+*.bak
+.streamlit/secrets.toml

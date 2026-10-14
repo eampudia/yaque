@@ -1,0 +1,5 @@
+[client]
+# No mostrar a los visitantes los detalles de los errores (pueden revelar código o rutas)
+showErrorDetails = "none"
+# Ocultar las opciones de desarrollador de la barra superior
+toolbarMode = "viewer"
