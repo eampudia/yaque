@@ -9,26 +9,28 @@ import subprocess
 st.set_page_config(page_title='YAQUE - ¿Y ahora qué?', page_icon="🤖", layout="wide")
 st.title('🤖 YAQUE (¿Y ahora qué) - La App Auto-Evolutiva')
 
-# Intentar obtener la API Key de varias fuentes seguras
-google_api_key = ""
-try:
-    from google.colab import userdata
-    google_api_key = userdata.get("GOOGLE_API_KEY")
-except Exception:
-    pass
+# Leer un secreto de varias fuentes: secretos de Streamlit, Colab o variables de entorno
+def leer_secreto(nombre):
+    try:
+        if nombre in st.secrets:
+            return st.secrets[nombre]
+    except Exception:
+        pass
+    try:
+        from google.colab import userdata
+        valor = userdata.get(nombre)
+        if valor:
+            return valor
+    except Exception:
+        pass
+    return os.environ.get(nombre, "")
 
-if not google_api_key:
-    google_api_key = os.environ.get("GOOGLE_API_KEY", "")
+google_api_key = leer_secreto("GOOGLE_API_KEY")
 
-# Intentar obtener credenciales de GitHub desde secretos
-github_token = ""
-github_repo = ""  # Formato: usuario/repositorio
-try:
-    from google.colab import userdata
-    github_token = userdata.get("GITHUB_TOKEN")
-    github_repo = userdata.get("GITHUB_REPO")
-except Exception:
-    pass
+# Credenciales de GitHub
+github_token = leer_secreto("GITHUB_TOKEN")
+github_repo = leer_secreto("GITHUB_REPO")  # Formato: usuario/repositorio
+github_branch = leer_secreto("GITHUB_BRANCH") or "master"
 
 # 1. Leer el código actual de app.py
 try:
@@ -163,7 +165,7 @@ if st.button("Evolucionar Aplicación"):
                         subprocess.run(["git", "commit", "-m", f"YAQUE Auto-update: {requerimiento[:50]}"], check=True)
                         
                         url_con_token = f"https://oauth2:{github_token}@github.com/{github_repo}.git"
-                        subprocess.run(["git", "push", url_con_token, "HEAD:main"], check=True, capture_output=True, text=True)
+                        subprocess.run(["git", "push", url_con_token, f"HEAD:{github_branch}"], check=True, capture_output=True, text=True)
                         st.success("¡Sincronizado correctamente con tu repositorio de GitHub!")
                     except Exception as git_error:
                         # Ocultar el token: el mensaje de error incluye el comando con la URL
