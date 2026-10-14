@@ -1066,37 +1066,54 @@ def responder(texto):
         indicador.limpiar()
 
 
+# Estilo compacto para el chat: burbujas, avatares y textos más pequeños
+ESTILO_CHAT = """
+<style>
+[data-testid="stBottomBlockContainer"] { padding-top: 0.5rem; padding-bottom: 0.75rem; }
+[data-testid="stChatMessage"] { padding: 0.2rem 0.5rem; gap: 0.5rem; margin: 0; }
+[data-testid="stChatMessage"] p { font-size: 0.9rem; margin-bottom: 0.15rem; }
+[data-testid="stChatMessage"] [data-testid^="stChatMessageAvatar"],
+[data-testid="stChatMessage"] > div:first-child { width: 1.5rem; height: 1.5rem; min-width: 1.5rem; font-size: 0.9rem; }
+</style>
+"""
+# Altura de la caja del historial cuando hay varios mensajes (con scroll)
+ALTURA_CHAT = 220
+
+
 def seccion_evolucion():
-    """Chat con YAQUE al final de la página, como ChatGPT o Gemini."""
-    st.divider()
-    st.write("### 💬 ¿Y ahora qué hacemos?")
+    """Chat con YAQUE fijo en la parte de abajo de la página, como ChatGPT o Gemini."""
+    st.html(ESTILO_CHAT)
+    with st.bottom:
+        # Historial compacto: crece con los primeros mensajes y después hace scroll hasta el último
+        historial = st.container(height=ALTURA_CHAT if len(conversacion()) > 2 else "content",
+                                 autoscroll=True, border=False)
+        with historial:
+            if not conversacion():
+                with burbuja("yaque"):
+                    st.markdown(f"¡Hola, {st.session_state.get('yaque_usuario', '')}! Soy YAQUE. Pídeme lo que "
+                                "quieras añadir a la aplicación o pregúntame lo que necesites.")
+            for rol, texto in conversacion():
+                with burbuja(rol):
+                    st.markdown(texto)
 
-    if conversacion():
-        if st.button("🗨️ Nueva conversación", key="yaque_nueva_conversacion"):
-            st.session_state.pop("yaque_conversacion", None)
-            st.rerun()
-    else:
-        with burbuja("yaque"):
-            st.markdown(f"¡Hola, {st.session_state.get('yaque_usuario', '')}! Soy YAQUE. Pídeme lo que quieras "
-                        "añadir a la aplicación o pregúntame lo que necesites.")
+        with st.container(horizontal=True, vertical_alignment="center", gap="small"):
+            peticion = st.chat_input("Pregúntame o pídeme lo que quieras...", max_chars=MAX_LONGITUD_PETICION)
+            if conversacion() and st.button("🗨️", key="yaque_nueva_conversacion", help="Nueva conversación"):
+                st.session_state.pop("yaque_conversacion", None)
+                st.rerun()
 
-    for rol, texto in conversacion():
-        with burbuja(rol):
-            st.markdown(texto)
-
-    peticion = st.chat_input("Pregúntame o pídeme lo que quieras...", max_chars=MAX_LONGITUD_PETICION)
     if not peticion or not peticion.strip():
         return
 
     texto = peticion.strip()
     conversacion().append(("usuario", texto))
-    with burbuja("usuario"):
-        st.markdown(texto)
-    with burbuja("yaque"):
-        resultado = responder(texto)
-        st.write_stream(escribir_poco_a_poco(resultado["mensaje"]))
+    with historial:
+        with burbuja("usuario"):
+            st.markdown(texto)
+        with burbuja("yaque"):
+            resultado = responder(texto)
+            st.write_stream(escribir_poco_a_poco(resultado["mensaje"]))
     conversacion().append(("yaque", resultado["mensaje"]))
 
-    if resultado.get("recargar"):
-        # Recargar la app para que se vea ya la nueva versión
-        st.rerun()
+    # Recargar para que se vea la nueva versión de la app (y el historial con su altura)
+    st.rerun()
