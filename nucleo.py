@@ -117,6 +117,8 @@ BUILTINS_PROHIBIDOS = {
     "delattr", "input", "breakpoint", "help", "exit", "quit", "memoryview",
 }
 
+# Mensaje para cualquier petición no permitida: no da pistas de qué regla se ha saltado
+NO_PERMITIDO = "No puedo implementar eso."
 # Peticiones que se rechazan sin llegar a Gemini (el texto se compara sin tildes y en minúsculas)
 PETICIONES_PROHIBIDAS = [
     r"secret", r"token", r"api[\s_-]?key", r"\bclaves?\b", r"contrasen", r"password", r"credencial",
@@ -921,8 +923,7 @@ def evolucionar(requerimiento):
 
             if respuesta.get("rechazado"):
                 registrar(f"Gemini rechazó la petición: {requerimiento!r}")
-                fallar(estado, "Esa petición no está permitida. Si crees que es un error, prueba a describirla "
-                               "de otra forma.")
+                fallar(estado, NO_PERMITIDO)
                 return
             if not cambios:
                 registrar(f"Gemini no propuso ningún cambio para: {requerimiento!r}")
@@ -934,8 +935,7 @@ def evolucionar(requerimiento):
                 nuevas = aplicar_cambios(funcionalidades, cambios)
             except ValueError as error:
                 registrar(f"Cambios rechazados: {error}")
-                fallar(estado, "La nueva versión no ha pasado la revisión de seguridad. Prueba a pedirla de "
-                               "otra forma.")
+                fallar(estado, NO_PERMITIDO)
                 return
             registrar("Cambios: " + ", ".join(f"{c.get('accion')} {c.get('id')}" for c in cambios))
             guardar_funcionalidades(nuevas)
@@ -995,8 +995,7 @@ def seccion_evolucion():
         st.warning("Por favor, escribe un requerimiento para modificar la app.")
         return
     elif len(texto) > MAX_LONGITUD_PETICION or peticion_sospechosa(texto):
-        st.error("Esa petición no está permitida: menciona secretos, código, usuarios, archivos del servidor "
-                 "u otros temas protegidos.")
+        st.error(NO_PERMITIDO)
         return
     else:
         def accion():
