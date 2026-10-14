@@ -69,6 +69,37 @@ if st.button("Evolucionar Aplicación"):
         with st.spinner("YAQUE está reescribiendo su propio código fuente..."):
             try:
                 client = genai.Client(api_key=google_api_key)
+
+                    # 1. Descargar todos los modelos disponibles desde la API
+                    modelos_disponibles = []
+                    for m in client.models.list():
+                        if 'gemini' in m.name.lower():
+                            modelos_disponibles.append(m.name)
+
+                    if not modelos_disponibles:
+                        st.error("No se encontraron modelos de Gemini disponibles en esta cuenta.")
+                        st.stop()
+
+                    # 2. Filtrar únicamente por la coincidencia estricta de 'flash' y 'lite'
+                    modelos_filtrados = [
+                        m for m in modelos_disponibles 
+                        if 'flash' in m.lower() and 'lite' in m.lower()
+                    ]
+
+                    if not modelos_filtrados:
+                        st.error("No se encontraron modelos que coincidan con 'flash' y 'lite' en tu cuenta.")
+                        st.stop()
+
+                    # 3. Función dinámica para extraer la versión numérica del string
+                    def extraer_numero_version(nombre):
+                        coincidencias = re.findall(r'\d+\.\d+|\d+', nombre)
+                        if  coincidencias:
+                            return float(coincidencias[0])
+                        return float('inf')
+
+                    # 4. Ordenar dinámicamente de menor a mayor versión
+                    modelos_ordenados = sorted(modelos_filtrados, key=extraer_numero_version)
+
                 
                 prompt = (
                     f"Eres un programador experto en Python.\n"
