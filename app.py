@@ -172,8 +172,57 @@ except Exception as e:
 
 # Mostrar el área principal de la app auto-generada
 st.markdown("--- (Inicio de la zona auto-generada) ---")
-# Aquí puedes poner la lógica interactiva o componentes que la app se vaya creando a sí misma.
-st.info("Esta es la versión inicial de YAQUE. ¡Pídeme añadirle cualquier funcionalidad usando el campo de abajo!")
+
+# Idea loca: ¡El Oráculo Absurdo y el Simulador de Excusas Universales!
+st.subheader("🔮 El Oráculo Absurdo y Creador de Excusas Cuánticas")
+st.write("¿Necesitas una excusa inquebrantable para no ir a trabajar, o quieres consultar una pregunta existencial a un ente de silicio con sobredosis de café? ¡Estás en el lugar correcto!")
+
+if "historial_oraculo" not in st.session_state:
+    st.session_state.historial_oraculo = []
+
+col1, col2 = st.columns(2)
+
+with col1:
+    st.markdown("### 🌀 Consulta al Oráculo")
+    pregunta_absurda = st.text_input("Escribe una pregunta muy profunda o absurda:", placeholder="Ej: ¿Por qué las tostadas siempre caen del lado de la mermelada?")
+    if st.button("Consultar al Oráculo"):
+        if not google_api_key:
+            st.error("Se necesita configurar la GOOGLE_API_KEY para que el oráculo despierte.")
+        elif not pregunta_absurda:
+            st.warning("¡El oráculo necesita al menos una duda existencial!")
+        else:
+            try:
+                client = genai.Client(api_key=google_api_key)
+                modelo_oraculo = elegir_modelo(client)
+                prompt_oraculo = f"Eres un oráculo cósmico, divertido, un poco cínico y muy sabio que responde con metáforas absurdas pero brillantes a esta pregunta: '{pregunta_absurda}'. Responde en un párrafo corto."
+                resp = client.models.generate_content(model=modelo_oraculo, contents=prompt_oraculo)
+                st.session_state.historial_oraculo.append({"tipo": "Pregunta", "texto": pregunta_absurda, "respuesta": resp.text})
+            except Exception as e:
+                st.error(f"El oráculo está meditando (error): {e}")
+
+with col2:
+    st.markdown("### 🏃‍♂️ Generador de Excusas Cuánticas")
+    motivo_excusa = st.selectbox("¿Para qué evento necesitas una excusa?", ["No ir a una reunión de trabajo", "No ir al gimnasio", "No contestar un mensaje cuñado", "Explicar por qué llegas tarde"])
+    if st.button("Generar Excusa Imbatible"):
+        if not google_api_key:
+            st.error("Configura tu API key para generar excusas científicamente infalibles.")
+        else:
+            try:
+                client = genai.Client(api_key=google_api_key)
+                modelo_excusa = elegir_modelo(client)
+                prompt_excusa = f"Inventa una excusa súper elaborada, que mezcle jerga científica falsa (como 'fluctuaciones cuánticas en el timbrado', 'alineación subatómica de los calcetines') para: {motivo_excusa}. Máximo 2 frases."
+                resp_excusa = client.models.generate_content(model=modelo_excusa, contents=prompt_excusa)
+                st.session_state.historial_oraculo.append({"tipo": "Excusa", "texto": motivo_excusa, "respuesta": resp_excusa.text})
+            except Exception as e:
+                st.error(f"Las excusas se agotaron temporalmente: {e}")
+
+if st.session_state.historial_oraculo:
+    st.markdown("#### 📜 Registro Akáshico de Consultas y Excusas")
+    for item in reversed(st.session_state.historial_oraculo[-5:]):
+        with st.container(border=True):
+            st.markdown(f"**[{item['tipo']}]** _{item['texto']}_")
+            st.info(item['respuesta'])
+
 st.markdown("--- (Fin de la zona auto-generada) ---")
 
 # Frases para entretener mientras Gemini piensa
