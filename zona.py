@@ -28,15 +28,17 @@ if "calc_val_ant" not in st.session_state:
 if "calc_nuevo" not in st.session_state:
     st.session_state.calc_nuevo = True
 
-# Definición de 10 personajes con sus características y colores para generar avatares bonitos
+# Definición extendida y rica de personajes para un Akinator de alta calidad
 PERSONAJES = [
     {
         "nombre": "Harry Potter",
-        "real": True,
+        "real": False,
         "genero": "masculino",
         "magia": True,
         "humano": True,
         "villano": False,
+        "animacion": False,
+        "franquicia": "Harry Potter",
         "color": (120, 20, 20),
         "icono": "⚡"
     },
@@ -47,6 +49,8 @@ PERSONAJES = [
         "magia": True,
         "humano": True,
         "villano": True,
+        "animacion": False,
+        "franquicia": "Star Wars",
         "color": (30, 30, 30),
         "icono": "🌌"
     },
@@ -57,6 +61,8 @@ PERSONAJES = [
         "magia": True,
         "humano": False,
         "villano": False,
+        "animacion": False,
+        "franquicia": "DC Comics",
         "color": (200, 160, 20),
         "icono": "⭐"
     },
@@ -67,6 +73,8 @@ PERSONAJES = [
         "magia": False,
         "humano": True,
         "villano": False,
+        "animacion": False,
+        "franquicia": "Literatura Clásica",
         "color": (50, 70, 90),
         "icono": "🔍"
     },
@@ -77,6 +85,8 @@ PERSONAJES = [
         "magia": True,
         "humano": True,
         "villano": False,
+        "animacion": True,
+        "franquicia": "Disney",
         "color": (100, 180, 220),
         "icono": "❄️"
     },
@@ -87,6 +97,8 @@ PERSONAJES = [
         "magia": False,
         "humano": True,
         "villano": False,
+        "animacion": False,
+        "franquicia": "Historia Real",
         "color": (90, 90, 90),
         "icono": "💡"
     },
@@ -97,6 +109,8 @@ PERSONAJES = [
         "magia": False,
         "humano": True,
         "villano": False,
+        "animacion": False,
+        "franquicia": "DC Comics",
         "color": (20, 20, 40),
         "icono": "🦇"
     },
@@ -107,6 +121,8 @@ PERSONAJES = [
         "magia": True,
         "humano": True,
         "villano": False,
+        "animacion": False,
+        "franquicia": "Harry Potter",
         "color": (150, 40, 40),
         "icono": "📚"
     },
@@ -117,6 +133,8 @@ PERSONAJES = [
         "magia": False,
         "humano": True,
         "villano": False,
+        "animacion": False,
+        "franquicia": "Marvel",
         "color": (220, 40, 40),
         "icono": "🤖"
     },
@@ -127,8 +145,70 @@ PERSONAJES = [
         "magia": False,
         "humano": True,
         "villano": False,
+        "animacion": False,
+        "franquicia": "Historia Real",
         "color": (180, 140, 40),
         "icono": "👑"
+    },
+    {
+        "nombre": "Goku",
+        "real": False,
+        "genero": "masculino",
+        "magia": True,
+        "humano": False,
+        "villano": False,
+        "animacion": True,
+        "franquicia": "Dragon Ball",
+        "color": (230, 120, 20),
+        "icono": "🐉"
+    },
+    {
+        "nombre": "Spider-Man",
+        "real": False,
+        "genero": "masculino",
+        "magia": False,
+        "humano": True,
+        "villano": False,
+        "animacion": False,
+        "franquicia": "Marvel",
+        "color": (200, 30, 30),
+        "icono": "🕷️"
+    },
+    {
+        "nombre": "Joker",
+        "real": False,
+        "genero": "masculino",
+        "magia": False,
+        "humano": True,
+        "villano": True,
+        "animacion": False,
+        "franquicia": "DC Comics",
+        "color": (80, 20, 120),
+        "icono": "🃏"
+    },
+    {
+        "nombre": "Homer Simpson",
+        "real": False,
+        "genero": "masculino",
+        "magia": False,
+        "humano": True,
+        "villano": False,
+        "animacion": True,
+        "franquicia": "Los Simpson",
+        "color": (240, 200, 40),
+        "icono": "🍩"
+    },
+    {
+        "nombre": "Leonardo da Vinci",
+        "real": True,
+        "genero": "masculino",
+        "magia": False,
+        "humano": True,
+        "villano": False,
+        "animacion": False,
+        "franquicia": "Historia Real",
+        "color": (140, 100, 60),
+        "icono": "🎨"
     }
 ]
 
@@ -151,9 +231,9 @@ pestana = st.tabs(["✨ Akinator Mágico", "🎨 Editor de Fotos Pro", "🧮 Cal
 
 with pestana[0]:
     st.markdown("<h2 style='text-align: center; color: #4A90E2;'>✨ El Gran Akinator Mágico ✨</h2>", unsafe_allow_html=True)
-    st.write("Piensa en uno de estos 10 personajes y responde a mis preguntas. ¡A ver si logro adivinarlo!")
+    st.write("Piensa en uno de los personajes de la lista y responde a mis preguntas. ¡Usaré lógica inteligente para adivinarlo!")
 
-    with st.expander("👀 Ver la lista de los 10 personajes posibles"):
+    with st.expander("👀 Ver la lista completa de personajes posibles"):
         cols = st.columns(5)
         for i, p in enumerate(PERSONAJES):
             with cols[i % 5]:
@@ -178,25 +258,40 @@ with pestana[0]:
         if not st.session_state.juego_terminado:
             candidatos = st.session_state.candidatos
             
-            if len(candidatos) <= 1 or st.session_state.preguntas_hechas >= 5:
+            # Si queda 1 candidato o ya hicimos suficientes preguntas, adivinar
+            if len(candidatos) <= 1 or st.session_state.preguntas_hechas >= 7:
                 st.session_state.juego_terminado = True
                 st.session_state.adivinado = True
                 st.session_state.personaje_actual = candidatos[0] if candidatos else random.choice(PERSONAJES)
                 st.rerun()
             
-            atributos_disponibles = ["magia", "genero", "humano", "villano", "real"]
-            atrib = random.choice(atributos_disponibles)
+            # Algoritmo inteligente: buscar el atributo que mejor divida a los candidatos restantes (entropía cercana a 50/50)
+            atributos_disponibles = ["magia", "genero", "humano", "villano", "real", "animacion"]
+            mejor_atributo = None
+            min_diferencia = float('inf')
+            
+            for atrib in atributos_disponibles:
+                if any(atrib in c for c in candidatos):
+                    conteo_si = sum(1 for c in candidatos if (c.get("genero") == "femenino" if atrib == "genero" else c.get(atrib, False)))
+                    diferencia = abs(len(candidatos) / 2 - conteo_si)
+                    if diferencia < min_diferencia:
+                        min_diferencia = diferencia
+                        mejor_atributo = atrib
+
+            if not mejor_atributo:
+                mejor_atributo = random.choice(atributos_disponibles)
             
             preguntas_map = {
-                "magia": "🔮 ¿Tu personaje utiliza magia o poderes sobrenaturales?",
+                "magia": "🔮 ¿Tu personaje utiliza magia, superpoderes o habilidades sobrenaturales?",
                 "genero": "👤 ¿Tu personaje es de género femenino?",
-                "humano": "🧬 ¿Tu personaje es un ser humano normal (sin superpoderes naturales/extraterrestres)?",
-                "villano": "🦹 ¿Tu personaje es considerado un villano o antagonista?",
-                "real": "📜 ¿Tu personaje es una persona real de la historia?"
+                "humano": "🧬 ¿Tu personaje es un ser humano (sin origen alienígena, dios, etc.)?",
+                "villano": "🦹 ¿Tu personaje es considerado un villano, antagonista o criminal?",
+                "real": "📜 ¿Tu personaje es una persona real de la historia o la vida real?",
+                "animacion": "🎨 ¿Tu personaje pertenece a una obra de animación, dibujo animado o anime?"
             }
             
             st.subheader(f"Pregunta #{st.session_state.preguntas_hechas + 1}")
-            st.write(preguntas_map[atrib])
+            st.write(preguntas_map.get(mejor_atributo, "¿Tu personaje cumple con esta característica?"))
             
             col1, col2, col3 = st.columns(3)
             
@@ -204,10 +299,10 @@ with pestana[0]:
                 st.session_state.preguntas_hechas += 1
                 nuevos_candidatos = []
                 for c in st.session_state.candidatos:
-                    if atrib == "genero":
-                        val = (c[atrib] == "femenino")
+                    if mejor_atributo == "genero":
+                        val = (c.get(mejor_atributo) == "femenino")
                     else:
-                        val = c[atrib]
+                        val = c.get(mejor_atributo, False)
                     
                     if respuesta == "Sí" and val:
                         nuevos_candidatos.append(c)
@@ -219,7 +314,7 @@ with pestana[0]:
                 if nuevos_candidatos:
                     st.session_state.candidatos = nuevos_candidatos
                 
-                if len(st.session_state.candidatos) == 1 or st.session_state.preguntas_hechas >= 5:
+                if len(st.session_state.candidatos) == 1 or st.session_state.preguntas_hechas >= 7:
                     st.session_state.juego_terminado = True
                     st.session_state.adivinado = True
                     st.session_state.personaje_actual = st.session_state.candidatos[0]
@@ -238,7 +333,7 @@ with pestana[0]:
         else:
             personaje = st.session_state.personaje_actual
             st.balloons()
-            st.success("🎉 ¡Akinator ha pensado en un resultado!")
+            st.success("🎉 ¡Akinator ha deducido el resultado!")
             
             col_img, col_txt = st.columns([1, 2])
             with col_img:
@@ -247,12 +342,18 @@ with pestana[0]:
                 
             with col_txt:
                 st.markdown(f"### ¡Tu personaje es **{personaje['nombre']}**! {personaje['icono']}")
+                st.write(f"Franquicia / Origen: **{personaje.get('franquicia', 'Desconocido')}**")
                 st.write(f"Preguntas realizadas: **{st.session_state.preguntas_hechas}**")
                 st.markdown("¿He acertado tu personaje?")
                 
-                if st.button("🔄 ¡Jugar otra vez!", use_container_width=True):
-                    reiniciar_juego()
-                    st.rerun()
+                col_res1, col_res2 = st.columns(2)
+                with col_res1:
+                    if st.button("🎯 ¡Sí, acertaste!", use_container_width=True):
+                        st.success("¡Genial! Gracias por jugar.")
+                with col_res2:
+                    if st.button("🔄 ¡Jugar otra vez!", use_container_width=True):
+                        reiniciar_juego()
+                        st.rerun()
 
 with pestana[1]:
     st.markdown("<h2 style='text-align: center; color: #E24A90;'>🎨 Editor de Fotos Estilo Photoshop Pro 🎨</h2>", unsafe_allow_html=True)
@@ -343,10 +444,8 @@ with pestana[2]:
     st.markdown("<h2 style='text-align: center; color: #2E8B57;'>🧮 Calculadora Estilo Windows 🧮</h2>", unsafe_allow_html=True)
     st.write("Una calculadora limpia y funcional con interfaz clásica.")
 
-    # Contenedor visual tipo calculadora
     calc_container = st.container()
     with calc_container:
-        # Pantalla de la calculadora
         display_val = st.session_state.get("calc_display", "0")
         st.markdown(
             f"""
@@ -419,7 +518,6 @@ with pestana[2]:
                 st.session_state.calc_display = "Error"
                 st.session_state.calc_nuevo = True
 
-        # Botonera de la calculadora en rejilla (4 columnas)
         c1, c2, c3, c4 = st.columns(4)
 
         with c1:
