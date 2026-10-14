@@ -6,11 +6,13 @@ ejecuta con permisos limitados (ejecutar_zona), sin acceso a secretos, archivos 
 """
 import ast
 import builtins
+import itertools
 import os
 import random
 import re
 import shutil
 import subprocess
+import sys
 import threading
 import unicodedata
 from datetime import datetime
@@ -20,6 +22,9 @@ from google import genai
 
 DIRECTORIO = os.path.dirname(os.path.abspath(__file__))
 ARCHIVO_ZONA = os.path.join(DIRECTORIO, "zona.py")
+# Nombre de la app inventado por Gemini según lo que contiene (no existe en la versión ORIGINAL)
+ARCHIVO_NOMBRE = os.path.join(DIRECTORIO, "nombre.txt")
+NOMBRE_POR_DEFECTO = "YAQUE"
 
 
 # Leer un secreto de varias fuentes: secretos de Streamlit, Colab o variables de entorno
@@ -295,6 +300,43 @@ def leer_zona():
         return ""
 
 
+def leer_nombre():
+    try:
+        with open(ARCHIVO_NOMBRE, "r", encoding="utf-8") as f:
+            return limpiar_nombre(f.read()) or NOMBRE_POR_DEFECTO
+    except FileNotFoundError:
+        return NOMBRE_POR_DEFECTO
+
+
+def limpiar_nombre(texto):
+    """Solo letras mayúsculas, números y guiones, como mucho 30 caracteres."""
+    primera_linea = (texto or "").strip().splitlines()[0] if (texto or "").strip() else ""
+    return re.sub(r"[^A-Z0-9ÑÇ-]", "", primera_linea.upper())[:30]
+
+
+def inventar_nombre(client, modelo, codigo):
+    """Pide a Gemini un nombre mezclando las funcionalidades de la app, p. ej. CALCULAKINATOR."""
+    respuesta = client.models.generate_content(
+        model=modelo,
+        contents=(
+            "Inventa el nombre de esta aplicación de Streamlit mezclando los nombres de sus funcionalidades "
+            "principales en una sola palabra divertida, como un acrónimo o palabra fusionada. Ejemplos: una "
+            "calculadora con un akinator -> CALCULAKINATOR; un editor de fotos con un tres en raya -> "
+            "FOTOTRESENRAYA; un reloj con un juego de memoria -> RELOJMEMORIX. Si solo tiene una funcionalidad, "
+            "haz un nombre divertido basado en ella. Si no tiene ninguna (solo un mensaje de bienvenida), "
+            f"responde {NOMBRE_POR_DEFECTO}. Responde SOLO con el nombre, en mayúsculas, sin espacios ni "
+            "explicaciones, con 25 caracteres como máximo.\n\n"
+            f"```python\n{codigo}\n```"
+        ),
+    )
+    return limpiar_nombre(respuesta.text)
+
+
+def archivos_de_la_app():
+    """Archivos que cambia la evolución y que se suben a GitHub."""
+    return [os.path.basename(a) for a in (ARCHIVO_ZONA, ARCHIVO_NOMBRE) if os.path.exists(a)]
+
+
 def describir_zona(codigo):
     """Resume en una frase corta qué hace la app ahora mismo, para la bitácora."""
     descripcion_por_defecto = "Estado antes del reset"
@@ -375,11 +417,142 @@ FRASES_MIENTRAS_PIENSA = [
     "Peinando las indentaciones...",
     "Consultando al oráculo de Python...",
     "Atornillando los widgets...",
+    "Cepillando los algoritmos...",
+    "Sacudiendo el polvo a las librerías...",
+    "Haciendo malabares con los bits...",
+    "Templando las comillas...",
+    "Untando mantequilla en los bucles...",
+    "Convenciendo a los decimales de que se porten bien...",
+    "Doblando las esquinas de los botones...",
+    "Pintando los píxeles uno a uno...",
+    "Inflando los globos de texto...",
+    "Contando ovejas binarias...",
+    "Hirviendo los ceros y los unos...",
+    "Tostando las listas...",
+    "Exprimiendo las funciones...",
+    "Planchando las arrugas del código...",
+    "Afilando las comas...",
+    "Engrasando los engranajes...",
+    "Sintonizando la frecuencia creativa...",
+    "Dándole cuerda a los relojes internos...",
+    "Domesticando a los bugs salvajes...",
+    "Persiguiendo un punto y coma fugitivo...",
+    "Abrillantando los iconos...",
+    "Desatascando las tuberías de datos...",
+    "Rellenando los huecos con ideas...",
+    "Remando contra el flujo de ejecución...",
+    "Midiendo los márgenes con regla...",
+    "Doblando servilletas de HTML...",
+    "Echando sal a los diccionarios...",
+    "Batiendo los datos a punto de nieve...",
+    "Horneando las variables a fuego lento...",
+    "Amasando la interfaz...",
+    "Cosiendo los botones a la pantalla...",
+    "Tejiendo una bufanda de funciones...",
+    "Abriendo la caja de herramientas...",
+    "Buscando el destornillador de estrella...",
+    "Apretando las tuercas del servidor...",
+    "Lijando los bordes de la ventana...",
+    "Hablando con los electrones...",
+    "Pidiendo permiso a la CPU...",
+    "Sobornando a la memoria RAM con galletas...",
+    "Despertando a los hámsters del servidor...",
+    "Dando de comer a los hámsters...",
+    "Esperando a que el café haga efecto...",
+    "Leyendo el manual por primera vez...",
+    "Fingiendo que todo estaba planeado...",
+    "Pensando muy fuerte...",
+    "Rascándose la cabeza digital...",
+    "Mirando al techo en busca de inspiración...",
+    "Contando hasta diez antes de compilar...",
+    "Respirando hondo...",
+    "Meditando en posición de loto binario...",
+    "Consultando con la almohada...",
+    "Tirando los dados del destino...",
+    "Leyendo los posos del café...",
+    "Consultando las estrellas del firmamento digital...",
+    "Invocando a los espíritus del teclado...",
+    "Agitando la varita mágica...",
+    "Mezclando la poción de funcionalidades...",
+    "Recitando el conjuro de Python...",
+    "Sacando un conejo de la chistera...",
+    "Encendiendo las velas del algoritmo...",
+    "Reorganizando el universo...",
+    "Moviendo montañas de datos...",
+    "Cruzando el puente de las dependencias...",
+    "Escalando la pila de llamadas...",
+    "Navegando por el mar de corchetes...",
+    "Explorando la jungla de condicionales...",
+    "Cartografiando la app...",
+    "Trazando la ruta más corta...",
+    "Esquivando excepciones...",
+    "Atrapando errores al vuelo...",
+    "Barriendo los bugs debajo de la alfombra...",
+    "Abriendo ventanas para ventilar...",
+    "Cambiando las bombillas de los iconos...",
+    "Ajustando el color del arcoíris...",
+    "Mezclando los tonos de la paleta...",
+    "Eligiendo la tipografía perfecta...",
+    "Centrando los divs... por fin...",
+    "Redondeando las esquinas...",
+    "Dándole un toque de estilo...",
+    "Poniéndole lacito a la interfaz...",
+    "Envolviendo para regalo...",
+    "Haciendo el último retoque...",
+    "Revisando que no sobre ningún tornillo...",
+    "Probando que todo encaja...",
+    "Pasando la aspiradora por el código...",
+    "Ordenando el cajón de las funciones...",
+    "Doblando los calcetines de las variables...",
+    "Regando las macetas de la interfaz...",
+    "Podando las ramas que sobran...",
+    "Plantando semillas de funcionalidad...",
+    "Esperando a que florezcan las ideas...",
+    "Recogiendo la cosecha de bytes...",
+    "Cocinando a fuego lento...",
+    "Dejando reposar la masa...",
+    "Añadiendo una pizca de magia...",
+    "Probando la sopa de código...",
+    "Calentando motores...",
+    "Revolucionando los cilindros...",
+    "Cambiando de marcha...",
+    "Pisando el acelerador...",
+    "Tomando la curva con cuidado...",
+    "Repostando creatividad...",
+    "Aterrizando la idea...",
+    "Despegando hacia la nueva versión...",
+    "Ajustando el rumbo...",
+    "Sincronizando los relojes atómicos...",
+    "Llamando a un amigo programador...",
+    "Preguntando al público...",
+    "Usando el comodín del 50%...",
+    "Haciendo un sudoku con las variables...",
+    "Resolviendo el cubo de Rubik del diseño...",
+    "Encajando las piezas del puzzle...",
+    "Componiendo la sinfonía del código...",
+    "Afinando la orquesta de funciones...",
+    "Ensayando el gran estreno...",
+    "Bajando el telón...",
+    "Preparando los fuegos artificiales...",
+    "Inflando el castillo hinchable...",
+    "Repartiendo confeti...",
+    "Casi, casi...",
+    "Un momentito más...",
+    "Ya queda menos...",
 ]
+
+
+def avisar_tras_recargar(tipo, texto):
+    """Guarda un mensaje para mostrarlo después de recargar la app."""
+    st.session_state.setdefault("yaque_avisos", []).append((tipo, texto))
 
 
 def mostrar_zona():
     """Muestra la parte auto-generada de la app, si pasa la revisión de seguridad."""
+    tipos_de_aviso = {"success": st.success, "warning": st.warning}
+    for tipo, texto in st.session_state.pop("yaque_avisos", []):
+        tipos_de_aviso[tipo](texto)
+
     codigo = leer_zona()
     if revisar_seguridad(codigo):
         st.error("La zona generada no ha pasado la revisión de seguridad y no se ha ejecutado. "
@@ -400,87 +573,99 @@ def nombre_rama_bitacora(descripcion):
     return f"bitacora/{fecha}-{resumen}" if resumen else f"bitacora/{fecha}"
 
 
+def registrar(texto):
+    """Detalles técnicos solo para los logs del servidor (Manage app), nunca en pantalla."""
+    if github_token:
+        texto = texto.replace(github_token, "***")
+    print(f"[YAQUE] {texto}", file=sys.stderr, flush=True)
+
+
+def con_frases(estado, frases, funcion, *args):
+    """Ejecuta funcion(*args) en un hilo aparte mientras el panel va mostrando frases inventadas."""
+    resultado = {}
+
+    def ejecutar():
+        try:
+            resultado["valor"] = funcion(*args)
+        except Exception as error:
+            resultado["error"] = error
+
+    hilo = threading.Thread(target=ejecutar)
+    hilo.start()
+    while hilo.is_alive():
+        estado.update(label=next(frases))
+        hilo.join(timeout=2)
+    if "error" in resultado:
+        raise resultado["error"]
+    return resultado.get("valor")
+
+
+def barajar_frases():
+    return itertools.cycle(random.sample(FRASES_MIENTRAS_PIENSA, len(FRASES_MIENTRAS_PIENSA)))
+
+
+def fallar(estado, mensaje):
+    estado.update(label="Vaya...", state="error", expanded=True)
+    st.error(mensaje)
+
+
 def hacer_reset():
-    with st.status("Preparando el reset...", expanded=True) as estado:
-        if not (github_token and github_repo):
-            estado.update(label="No se puede hacer el reset", state="error")
-            st.error("La aplicación no está conectada a GitHub.")
-            return
-        if github_branch == RAMA_ORIGINAL:
-            estado.update(label="No se puede hacer el reset", state="error")
-            st.error(f"La rama de trabajo no puede ser {RAMA_ORIGINAL}.")
+    frases = barajar_frases()
+    with st.status(next(frases), expanded=False) as estado:
+        if not (github_token and github_repo) or github_branch == RAMA_ORIGINAL:
+            registrar(f"Reset imposible: falta GITHUB_TOKEN/GITHUB_REPO o la rama de trabajo es {RAMA_ORIGINAL}")
+            fallar(estado, "Ahora mismo no se puede hacer el reset.")
             return
         try:
             # 1. Guardar la versión actual en una rama de bitácora
-            estado.update(label="Escribiendo la bitácora...")
-            estado.write("📝 Describiendo la versión actual para la bitácora...")
-            descripcion = describir_zona(leer_zona())
+            descripcion = con_frases(estado, frases, describir_zona, leer_zona())
             rama = nombre_rama_bitacora(descripcion)
 
-            estado.write(f"📚 Guardando la versión actual en la rama {rama}...")
-            configurar_git()
-            git("add", "zona.py")
-            git("commit", "--allow-empty", "-m", f"Bitácora: {descripcion}")
-            git("push", url_repo(), f"HEAD:refs/heads/{rama}")
+            def guardar_bitacora():
+                configurar_git()
+                git("add", *archivos_de_la_app())
+                git("commit", "--allow-empty", "-m", f"Bitácora: {leer_nombre()} - {descripcion}")
+                git("push", url_repo(), f"HEAD:refs/heads/{rama}")
+
+            con_frases(estado, frases, guardar_bitacora)
+            registrar(f"Bitácora guardada en la rama {rama}")
 
             # 2. Sobrescribir la rama de trabajo con ORIGINAL (ORIGINAL solo se lee)
-            estado.update(label="Volviendo a la versión ORIGINAL...")
-            estado.write(f"⏪ Sobrescribiendo {github_branch} con {RAMA_ORIGINAL}...")
-            git("fetch", url_repo(), RAMA_ORIGINAL)
-            git("push", "--force", url_repo(), f"FETCH_HEAD:refs/heads/{github_branch}")
-            git("reset", "--hard", "FETCH_HEAD")
+            def volver_a_original():
+                git("fetch", url_repo(), RAMA_ORIGINAL)
+                git("push", "--force", url_repo(), f"FETCH_HEAD:refs/heads/{github_branch}")
+                git("reset", "--hard", "FETCH_HEAD")
+                if os.path.exists(ARCHIVO_NOMBRE):
+                    os.remove(ARCHIVO_NOMBRE)
+
+            con_frases(estado, frases, volver_a_original)
 
             st.session_state.clear()
-            estado.update(label="¡Reset completado!", state="complete")
-            st.success(f"YAQUE ha vuelto a su versión ORIGINAL. La versión anterior está guardada en la rama '{rama}'. Recarga la página.")
+            estado.update(label="¡Listo!", state="complete")
+            avisar_tras_recargar("success", "YAQUE ha vuelto a su versión original.")
+            return True
         except Exception as e:
-            estado.update(label="Algo ha salido mal en el reset", state="error")
-            st.error(f"Ocurrió un error al hacer el reset: {e}")
+            registrar(f"Error en el reset: {e}")
+            fallar(estado, "Algo ha salido mal. Inténtalo de nuevo en un rato.")
 
 
 def evolucionar(requerimiento):
-    with st.status("YAQUE se pone manos a la obra...", expanded=True) as estado:
+    frases = barajar_frases()
+    with st.status(next(frases), expanded=False) as estado:
         try:
             client = genai.Client(api_key=google_api_key)
 
-            estado.write("🔭 Buscando modelos de Gemini disponibles...")
-            modelo_elegido = elegir_modelo(client)
+            modelo_elegido = con_frases(estado, frases, elegir_modelo, client)
             if not modelo_elegido:
-                estado.update(label="No hay modelos disponibles", state="error")
-                st.error("No se encontraron modelos Gemini 'flash lite' de texto en tu cuenta.")
+                registrar("No se encontraron modelos Gemini 'flash lite' de texto en la cuenta")
+                fallar(estado, "Ahora mismo YAQUE no puede evolucionar. Inténtalo más tarde.")
                 return
-            estado.write(f"🧠 Elegido el modelo {modelo_elegido}")
+            registrar(f"Modelo elegido: {modelo_elegido}")
 
             prompt = crear_prompt(leer_zona(), requerimiento)
-
-            # Llamar a Gemini en un hilo aparte para ir mostrando frases mientras responde
-            estado.write("✍️ Pidiendo a Gemini que reescriba la aplicación...")
-            resultado = {}
-
-            def llamar_a_gemini():
-                try:
-                    resultado["respuesta"] = client.models.generate_content(
-                        model=modelo_elegido,
-                        contents=prompt,
-                    )
-                except Exception as error_gemini:
-                    resultado["error"] = error_gemini
-
-            hilo = threading.Thread(target=llamar_a_gemini)
-            hilo.start()
-            frases = random.sample(FRASES_MIENTRAS_PIENSA, len(FRASES_MIENTRAS_PIENSA))
-            indice = 0
-            while hilo.is_alive():
-                estado.update(label=frases[indice % len(frases)])
-                indice += 1
-                hilo.join(timeout=2)
-
-            if "error" in resultado:
-                raise resultado["error"]
-            response = resultado["respuesta"]
-
-            estado.update(label="Revisando el código nuevo...")
-            estado.write("🔍 Comprobando que el código generado es válido y seguro...")
+            response = con_frases(
+                estado, frases, lambda: client.models.generate_content(model=modelo_elegido, contents=prompt),
+            )
 
             # Gemini puede responder sin texto (bloqueo de seguridad, límite de tokens...)
             if not response.text:
@@ -489,16 +674,16 @@ def evolucionar(requerimiento):
                     motivo = response.candidates[0].finish_reason
                 elif response.prompt_feedback:
                     motivo = response.prompt_feedback.block_reason
-                estado.update(label="Gemini no ha devuelto código", state="error")
-                st.error(f"Gemini ({modelo_elegido}) respondió sin código. Motivo: {motivo}. No se ha modificado la app.")
+                registrar(f"Gemini ({modelo_elegido}) respondió sin código. Motivo: {motivo}")
+                fallar(estado, "YAQUE no ha sabido hacer esa evolución. Prueba a pedirla de otra forma.")
                 return
 
             nuevo_codigo = response.text.strip()
 
             if nuevo_codigo == "RECHAZADO":
-                estado.update(label="Petición rechazada", state="error")
-                st.error("Gemini ha considerado que esta petición no es segura. Si crees que es un error, "
-                         "prueba a describirla de otra forma.")
+                registrar(f"Gemini rechazó la petición: {requerimiento!r}")
+                fallar(estado, "Esa petición no está permitida. Si crees que es un error, prueba a describirla "
+                               "de otra forma.")
                 return
 
             # Limpiar posibles bloques markdown accidentales del LLM
@@ -511,41 +696,52 @@ def evolucionar(requerimiento):
             # Validar que el código generado es Python válido y seguro antes de sobrescribir nada
             problemas = revisar_seguridad(nuevo_codigo)
             if problemas:
-                estado.update(label="El código generado no era seguro", state="error")
-                st.error("El código generado no ha pasado la revisión de seguridad, no se ha modificado la app:\n- "
-                         + "\n- ".join(problemas))
+                registrar("Código generado rechazado por la revisión de seguridad: " + "; ".join(problemas))
+                fallar(estado, "La nueva versión no ha pasado la revisión de seguridad. Prueba a pedirla de "
+                               "otra forma.")
                 return
 
             # Guardar una copia de seguridad de la versión anterior
-            estado.write("💾 Guardando copia de seguridad y escribiendo el código nuevo...")
             if os.path.exists(ARCHIVO_ZONA):
                 shutil.copyfile(ARCHIVO_ZONA, ARCHIVO_ZONA + ".bak")
 
             with open(ARCHIVO_ZONA, "w", encoding="utf-8") as f:
                 f.write(nuevo_codigo + "\n")
 
+            # Bautizar la app según lo que tiene ahora (si falla, se queda con el nombre anterior)
+            nombre = ""
+            try:
+                nombre = con_frases(estado, frases, inventar_nombre, client, modelo_elegido, nuevo_codigo)
+            except Exception as error_nombre:
+                registrar(f"No se pudo inventar el nombre: {error_nombre}")
+            if nombre:
+                with open(ARCHIVO_NOMBRE, "w", encoding="utf-8") as f:
+                    f.write(nombre + "\n")
+
             # Empezar con un estado limpio: el de la versión anterior puede no encajar con el código nuevo
             st.session_state.clear()
 
             # Sincronizar automáticamente con GitHub si están las credenciales
             if github_token and github_repo and github_branch != RAMA_ORIGINAL:
-                try:
-                    estado.update(label="Subiendo los cambios a GitHub...")
-                    estado.write("🚀 Subiendo los cambios a GitHub...")
+                def guardar_cambios():
                     configurar_git()
-                    git("add", "zona.py")
-                    git("commit", "-m", f"YAQUE Auto-update: {requerimiento[:50]}")
+                    git("add", *archivos_de_la_app())
+                    git("commit", "-m", f"YAQUE Auto-update ({leer_nombre()}): {requerimiento[:50]}")
                     git("push", url_repo(), f"HEAD:refs/heads/{github_branch}")
-                    estado.write("✅ Sincronizado con GitHub")
-                except Exception as git_error:
-                    st.warning(f"El código se actualizó localmente pero falló la subida a GitHub: {git_error}")
 
-            estado.update(label="¡YAQUE ha evolucionado!", state="complete")
-            st.success("¡Código actualizado con éxito! Recarga la página de Streamlit para ver los cambios aplicados en caliente.")
+                try:
+                    con_frases(estado, frases, guardar_cambios)
+                except Exception as git_error:
+                    registrar(f"Falló la subida a GitHub: {git_error}")
+                    avisar_tras_recargar("warning", "Puede que esta versión no se conserve si la app se reinicia.")
+
+            estado.update(label="¡Listo!", state="complete")
+            avisar_tras_recargar("success", f"¡YAQUE ha evolucionado! Ahora la aplicación se llama {leer_nombre()}.")
+            return True
 
         except Exception as e:
-            estado.update(label="Algo ha salido mal", state="error")
-            st.error(f"Ocurrió un error al procesar la actualización: {e}")
+            registrar(f"Error al evolucionar: {e}")
+            fallar(estado, "Algo ha salido mal. Inténtalo de nuevo en un rato.")
 
 
 def seccion_evolucion():
@@ -566,11 +762,14 @@ def seccion_evolucion():
 
     texto = requerimiento.strip()
     if normalizar(texto).rstrip(".!") == COMANDO_RESET:
-        hacer_reset()
+        if hacer_reset():
+            st.rerun()
     elif not texto:
         st.warning("Por favor, escribe un requerimiento para modificar la app.")
     elif len(texto) > MAX_LONGITUD_PETICION or peticion_sospechosa(texto):
         st.error("Esa petición no está permitida: menciona secretos, código, usuarios, archivos del servidor "
                  "u otros temas protegidos.")
     else:
-        evolucionar(texto)
+        if evolucionar(texto):
+            # Recargar la app para que se vea ya la nueva versión de zona.py
+            st.rerun()
