@@ -83,9 +83,15 @@ if st.button("Evolucionar Aplicación"):
 
                 # 1. Descargar todos los modelos disponibles desde la API
                 estado.write("🔭 Buscando modelos de Gemini disponibles...")
+                # Solo modelos que generan texto: fuera los de voz, imagen, audio, tiempo real o embeddings
+                palabras_excluidas = ('tts', 'image', 'audio', 'live', 'embedding', 'native')
                 modelos_disponibles = []
                 for m in client.models.list():
-                    if 'gemini' in m.name.lower():
+                    nombre = m.name.lower()
+                    acciones = getattr(m, 'supported_actions', None)
+                    if acciones is not None and 'generateContent' not in acciones:
+                        continue
+                    if 'gemini' in nombre and not any(p in nombre for p in palabras_excluidas):
                         modelos_disponibles.append(m.name)
 
                 if not modelos_disponibles:
@@ -112,8 +118,13 @@ if st.button("Evolucionar Aplicación"):
                         return float(coincidencias[0])
                     return float('-inf')
 
-                # 4. Ordenar de menor a mayor versión y quedarnos con la más reciente
-                modelos_ordenados = sorted(modelos_filtrados, key=extraer_numero_version)
+                # 4. Ordenar de menor a mayor versión (a igual versión, las estables por delante
+                #    de las 'preview'/'exp') y quedarnos con la más reciente
+                def clave_orden(nombre):
+                    es_estable = not any(p in nombre.lower() for p in ('preview', 'exp'))
+                    return (extraer_numero_version(nombre), es_estable)
+
+                modelos_ordenados = sorted(modelos_filtrados, key=clave_orden)
                 modelo_elegido = modelos_ordenados[-1]
                 estado.write(f"🧠 Elegido el modelo {modelo_elegido}")
 
@@ -158,6 +169,18 @@ if st.button("Evolucionar Aplicación"):
 
                 estado.update(label="Revisando el código nuevo...")
                 estado.write("🔍 Comprobando que el código generado es válido...")
+
+                # Gemini puede responder sin texto (bloqueo de seguridad, límite de tokens...)
+                if not response.text:
+                    motivo = "desconocido"
+                    if response.candidates:
+                        motivo = response.candidates[0].finish_reason
+                    elif response.prompt_feedback:
+                        motivo = response.prompt_feedback.block_reason
+                    estado.update(label="Gemini no ha devuelto código", state="error")
+                    st.error(f"Gemini ({modelo_elegido}) respondió sin código. Motivo: {motivo}. No se ha modificado app.py.")
+                    st.stop()
+
                 nuevo_codigo = response.text.strip()
 
                 # Limpiar posibles bloques markdown accidentales del LLM
