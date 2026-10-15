@@ -10,5 +10,9 @@
   {
     "id": "gestor_tareas",
     "titulo": "📝 Gestor de Tareas y Notas"
+  },
+  {
+    "id": "creador_poesias",
+    "titulo": "✍️ Creador de Poesías"
   }
 ]
