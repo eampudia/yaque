@@ -18,5 +18,9 @@
   {
     "id": "calendario_mes",
     "titulo": "📅 Calendario"
+  },
+  {
+    "id": "editor_imagenes",
+    "titulo": "🖼️ Editor de Imágenes"
   }
 ]
