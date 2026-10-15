@@ -22,5 +22,9 @@
   {
     "id": "editor_imagenes",
     "titulo": "🖼️ Editor de Imágenes"
+  },
+  {
+    "id": "notas_creativas",
+    "titulo": "📝 Notas Creativas"
   }
 ]
