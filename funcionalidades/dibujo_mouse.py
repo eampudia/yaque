@@ -14,7 +14,7 @@ if 'dibujo_calc_nuevo' not in st.session_state:
 st.markdown('### 🧮 Calculadora Compacta')
 
 with st.container():
-    st.markdown('<style>div[data-testid="stHorizontalBlock"] > div {{padding: 1px;}} .stButton>button {{padding: 2px 0px; font-size: 12px; min-height: 25px;}}</style>', unsafe_allow_html=True)
+    st.markdown('<style>div[data-testid="stHorizontalBlock"] > div {{padding: 1px;}} .stButton>button {{padding: 1px 0px; font-size: 11px; min-height: 20px;}}</style>', unsafe_allow_html=True)
     st.text_input('Pantalla', value=st.session_state.dibujo_calc_pantalla, key='dibujo_mouse_calc_screen', disabled=True, label_visibility='collapsed')
     
     def agregar_digito(digito):
