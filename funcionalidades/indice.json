@@ -14,5 +14,9 @@
   {
     "id": "creador_poesias",
     "titulo": "✍️ Créateur de Poésies"
+  },
+  {
+    "id": "pomodoro",
+    "titulo": "⏱️ Temporizador Pomodoro"
   }
 ]
